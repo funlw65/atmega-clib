@@ -49,7 +49,7 @@
 #include <util/delay.h>
 #include <stdarg.h>
 #include <stdlib.h>
-#include <atmegaclib.h>
+#include <atmegaclib2.h>
 #ifdef ENABLE_IR
 #include "irkeys.h"
 #endif
@@ -150,7 +150,7 @@ inline void onboard_led_toggle(void){
 #endif
 }
 
-#ifdef ENABLE_MILLIS
+#ifdef ENABLE_NB_DELAYS
 #define clockCyclesPerMicrosecond() ( F_CPU / 1000000L )
 #define clockCyclesToMicroseconds(a) ( (a) / clockCyclesPerMicrosecond() )
 #define microsecondsToClockCycles(a) ( (a) * clockCyclesPerMicrosecond() )
@@ -168,33 +168,40 @@ inline void onboard_led_toggle(void){
 #define FRACT_MAX (1000 >> 3)
 
 volatile uint32_t timer0_overflow_count = 0;
-volatile uint32_t timer0_millis = 0;
+//volatile uint32_t timer0_millis = 0;
 static uint8_t timer0_fract = 0;
 
-//#if defined(__AVR_ATtiny24__) || defined(__AVR_ATtiny44__) || defined(__AVR_ATtiny84__)
-//ISR(TIM0_OVF_vect)
-//#else
+#if defined(__AVR_ATtiny24__) || defined(__AVR_ATtiny44__) || defined(__AVR_ATtiny84__)
+ISR(TIM0_OVF_vect)
+#else
 ISR(TIMER0_OVF_vect)
-//#endif
+#endif
 {
 	// copy these to local variables so they can be stored in registers
 	// (volatile variables must be read from memory on every access)
-	uint32_t m = timer0_millis;
-	uint8_t f = timer0_fract;
+	//uint32_t m = timer0_millis;
+	uint8_t f = timer0_fract, i = 1, j;
 
-	m += MILLIS_INC;
+	//m += MILLIS_INC;
 	f += FRACT_INC;
 	if (f >= FRACT_MAX) {
 		f -= FRACT_MAX;
-		m += 1;
+		//m += 1;
+		i = 2;
 	}
 
 	timer0_fract = f;
-	timer0_millis = m;
+	//timer0_millis = m;
 	timer0_overflow_count++;
+	for (j=0; j<DELAY_SLOTS;j++){
+		if(isr_countdowns[j] > 0){
+			//
+			isr_countdowns[j] = isr_countdowns[j] - i;
+		}
+	}
 }
 
-void millis_init(void) {
+void timer0_isr_init(void) {
 #if defined(TCCR0A) && defined(WGM01)
 	sbi(TCCR0A, WGM01);
 	sbi(TCCR0A, WGM00);
@@ -228,19 +235,25 @@ void millis_init(void) {
 #endif
 }
 
-uint32_t millis()
+// check if the time in a specific slot expired
+uint8_t check_delay(uint8_t slot)
 {
-	uint32_t m;
+	if (slot >= DELAY_SLOTS) return TRUE;
+	if (isr_countdowns[slot]<=0) return TRUE;
+	return FALSE;
+}
+
+//set the duration of a delay (in milliseconds) in a specific slot
+void set_delay(uint8_t slot, uint16_t ms_time){
+	if(slot >= DELAY_SLOTS) return;
 	uint8_t oldSREG = SREG;
 
-	// disable interrupts while we read timer0_millis or we might get an
-	// inconsistent value (e.g. in the middle of a write to timer0_millis)
 	cli();
-	m = timer0_millis;
+	isr_countdowns[slot] = ms_time;
 	SREG = oldSREG;
-	return m;
+	sei();
 }
-#endif
+#endif //ENABLE_NB_DELAYS
 
 #ifdef ENABLE_CONVERSION
 uint8_t bcd2bin(uint8_t bcd) {
@@ -2015,368 +2028,7 @@ unsigned short ow_crc16(unsigned short *data, unsigned short len)
 #ifdef ENABLE_DALLAS_TEMP
 // private variables
 
-// used to determine the delay amount needed to allow for the
-// temperature conversion to take place
-int conversionDelay;
 
-// count of devices on the bus
-uint8_t devices;
-
-void dt_init(void)
-{
-	DeviceAddress deviceAddress;
-	// initialize the global variables
-	devices = 0;
-	parasite = FALSE;
-	conversionDelay = TEMP_12_BIT;
-	//
-	ow_reset_search();
-	while (ow_search(deviceAddress))
-	{
-		if (dt_validAddress(deviceAddress))
-		{
-			if (!parasite && dt_readPowerSupply(deviceAddress)) parasite = TRUE;
-
-			ScratchPad scratchPad;
-
-			dt_readScratchPad(deviceAddress, scratchPad);
-
-			if (deviceAddress[0] == DS18S20MODEL) conversionDelay = TEMP_12_BIT; // 750 ms
-			else if (scratchPad[CONFIGURATION] > conversionDelay) conversionDelay = scratchPad[CONFIGURATION];
-
-			devices++;
-		}
-	}
-}
-
-// returns the number of devices found on the bus
-uint8_t dt_getDeviceCount(void)
-{
-	return devices;
-}
-
-// returns true if address is valid
-uint8_t dt_validAddress(uint8_t* deviceAddress)
-{
-	return (ow_crc8(deviceAddress, 7) == deviceAddress[7]);
-}
-
-// finds an address at a given index on the bus
-// returns true if the device was found
-uint8_t dt_getAddress(uint8_t* deviceAddress, uint8_t index)
-{
-	uint8_t depth = 0;
-
-	ow_reset_search();
-
-	while (depth <= index && ow_search(deviceAddress))
-	{
-		if (depth == index && dt_validAddress(deviceAddress)) return TRUE;
-		depth++;
-	}
-
-	return FALSE;
-}
-
-// read device's scratch pad
-void dt_readScratchPad(uint8_t* deviceAddress, uint8_t* scratchPad)
-{
-	// send the command
-	ow_reset();
-	ow_select_rom(deviceAddress);
-	ow_write_byte(OW_READ_SCRATCHPAD, parasite);
-
-	// read the response
-
-	// byte 0: temperature LSB
-	scratchPad[TEMP_LSB] = ow_read_byte();
-
-	// byte 1: temperature MSB
-	scratchPad[TEMP_MSB] = ow_read_byte();
-
-	// byte 2: high alarm temp
-	scratchPad[HIGH_ALARM_TEMP] = ow_read_byte();
-
-	// byte 3: low alarm temp
-	scratchPad[LOW_ALARM_TEMP] = ow_read_byte();
-
-	// byte 4:
-	// DS18S20: store for crc
-	// DS18B20 & DS1822: configuration register
-	scratchPad[CONFIGURATION] = ow_read_byte();
-
-	// byte 5:
-	// internal use & crc
-	scratchPad[INTERNAL_BYTE] = ow_read_byte();
-
-	// byte 6:
-	// DS18S20: COUNT_REMAIN
-	// DS18B20 & DS1822: store for crc
-	scratchPad[COUNT_REMAIN] = ow_read_byte();
-
-	// byte 7:
-	// DS18S20: COUNT_PER_C
-	// DS18B20 & DS1822: store for crc
-	scratchPad[COUNT_PER_C] = ow_read_byte();
-
-	// byte 8:
-	// SCTRACHPAD_CRC
-	scratchPad[SCRATCHPAD_CRC] = ow_read_byte();
-
-	ow_reset();
-}
-
-// attempt to determine if the device at the given address is connected to the bus
-// also allows for updating the read scratchpad
-uint8_t dt_isConnected2(uint8_t* deviceAddress, uint8_t* scratchPad)
-{
-	dt_readScratchPad(deviceAddress, scratchPad);
-	return (ow_crc8(scratchPad, 8) == scratchPad[SCRATCHPAD_CRC]);
-}
-
-// attempt to determine if the device at the given address is connected to the bus
-uint8_t dt_isConnected(uint8_t* deviceAddress)
-{
-	ScratchPad scratchPad;
-	return dt_isConnected2(deviceAddress, scratchPad);
-}
-
-// writes device's scratch pad
-void dt_writeScratchPad(uint8_t* deviceAddress, const uint8_t* scratchPad)
-{
-	ow_reset();
-	ow_select_rom(deviceAddress);
-	ow_write_byte(OW_WRITE_SCRATCHPAD, parasite);
-	ow_write_byte(scratchPad[HIGH_ALARM_TEMP], parasite); // high alarm temp
-	ow_write_byte(scratchPad[LOW_ALARM_TEMP], parasite);// low alarm temp
-	// DS18S20 does not use the configuration register
-	if (deviceAddress[0] != DS18S20MODEL) ow_write_byte(scratchPad[CONFIGURATION], parasite);// configuration
-	ow_reset();
-	// save the newly written values to eeprom
-	ow_write_byte(OW_COPY_SCRATCHPAD, parasite);
-	if (parasite) _delay_ms(10);// 10ms delay
-	ow_reset();
-}
-
-// reads the device's power requirements
-uint8_t dt_readPowerSupply(uint8_t* deviceAddress)
-{
-	uint8_t ret = FALSE;
-	ow_reset();
-	ow_select_rom(deviceAddress);
-	ow_write_byte(OW_READ_POWER_SRC, parasite);
-	if (ow_read_bit() == 0) ret = TRUE;
-	ow_reset();
-	return ret;
-}
-
-// returns the current resolution, 9-12
-uint8_t dt_getResolution(uint8_t* deviceAddress)
-{
-	if (deviceAddress[0] == DS18S20MODEL) return 9; // this model has a fixed resolution
-
-	ScratchPad scratchPad;
-	dt_readScratchPad(deviceAddress, scratchPad);
-	switch (scratchPad[CONFIGURATION])
-	{
-		case TEMP_12_BIT:
-		return 12;
-		break;
-		case TEMP_11_BIT:
-		return 11;
-		break;
-		case TEMP_10_BIT:
-		return 10;
-		break;
-		case TEMP_9_BIT:
-		return 9;
-		break;
-	}
-	return 0;
-}
-
-// set resolution of a device to 9, 10, 11, or 12 bits
-void dt_setResolution(uint8_t* deviceAddress, uint8_t newResolution)
-{
-	ScratchPad scratchPad;
-	if (dt_isConnected2(deviceAddress, scratchPad))
-	{
-		// DS18S20 has a fixed 9-bit resolution
-		if (deviceAddress[0] != DS18S20MODEL)
-		{
-			switch (newResolution)
-			{
-				case 12:
-				scratchPad[CONFIGURATION] = TEMP_12_BIT;
-				break;
-				case 11:
-				scratchPad[CONFIGURATION] = TEMP_11_BIT;
-				break;
-				case 10:
-				scratchPad[CONFIGURATION] = TEMP_10_BIT;
-				break;
-				case 9:
-				default:
-				scratchPad[CONFIGURATION] = TEMP_9_BIT;
-				break;
-			}
-			dt_writeScratchPad(deviceAddress, scratchPad);
-		}
-	}
-}
-
-// sends command for all devices on the bus to perform a temperature
-void dt_requestTemperatures(void)
-{
-	ow_reset();
-	ow_skip_rom();
-	ow_write_byte(OW_CONVERT_T, parasite);
-
-	switch (conversionDelay)
-	{
-		case TEMP_9_BIT:
-		_delay_ms(94);
-		break;
-		case TEMP_10_BIT:
-		_delay_ms(188);
-		break;
-		case TEMP_11_BIT:
-		_delay_ms(375);
-		break;
-		case TEMP_12_BIT:
-		default:
-		_delay_ms(750);
-		break;
-	}
-}
-
-// sends command for one device to perform a temperature by address
-void dt_requestTemperaturesByAddress(uint8_t* deviceAddress)
-{
-	ow_reset();
-	ow_select_rom(deviceAddress);
-	ow_write_byte(OW_CONVERT_T, parasite);
-
-	switch (conversionDelay)
-	{
-		case TEMP_9_BIT:
-		_delay_ms(94);
-		break;
-		case TEMP_10_BIT:
-		_delay_ms(188);
-		break;
-		case TEMP_11_BIT:
-		_delay_ms(375);
-		break;
-		case TEMP_12_BIT:
-		default:
-		_delay_ms(750);
-		break;
-	}
-}
-
-// sends command for one device to perform a temp conversion by index
-void dt_requestTemperaturesByIndex(uint8_t deviceIndex)
-{
-	DeviceAddress deviceAddress;
-	dt_getAddress(deviceAddress, deviceIndex);
-	dt_requestTemperaturesByAddress(deviceAddress);
-}
-
-// reads scratchpad and returns the temperature in degrees C
-float dt_calculateTemperature(uint8_t* deviceAddress, uint8_t* scratchPad)
-{
-	dt_rawTemperature = (((int16_t)scratchPad[TEMP_MSB]) << 8) | scratchPad[TEMP_LSB];
-
-	switch (deviceAddress[0])
-	{
-		case DS18B20MODEL:
-		case DS1822MODEL:
-		switch (scratchPad[CONFIGURATION])
-		{
-			case TEMP_12_BIT:
-			return (float)dt_rawTemperature * 0.0625;
-			break;
-			case TEMP_11_BIT:
-			return (float)(dt_rawTemperature >> 1) * 0.125;
-			break;
-			case TEMP_10_BIT:
-			return (float)(dt_rawTemperature >> 2) * 0.25;
-			break;
-			case TEMP_9_BIT:
-			return (float)(dt_rawTemperature >> 3) * 0.5;
-			break;
-		}
-		break;
-		case DS18S20MODEL:
-		/*
-
-		 Resolutions greater than 9 bits can be calculated using the data from
-		 the temperature, COUNT REMAIN and COUNT PER C registers in the
-		 scratchpad. Note that the COUNT PER C register is hard-wired to 16
-		 (10h). After reading the scratchpad, the TEMP_READ value is obtained
-		 by truncating the 0.5C bit (bit 0) from the temperature data. The
-		 extended resolution temperature can then be calculated using the
-		 following equation:
-
-		 COUNT_PER_C - COUNT_REMAIN
-		 TEMPERATURE = TEMP_READ - 0.25 + --------------------------
-		 COUNT_PER_C
-		 */
-
-		// Good spot. Thanks Nic Johns for your contribution
-		return (float)(dt_rawTemperature >> 1) - 0.25 +((float)(scratchPad[COUNT_PER_C] - scratchPad[COUNT_REMAIN]) / (float)scratchPad[COUNT_PER_C] );
-		break;
-	}
-	return 0.0;
-}
-
-// returns temperature in degrees C or DEVICE_DISCONNECTED if the
-// device's scratch pad cannot be read successfully.
-// the numeric value of DEVICE_DISCONNECTED is defined in
-// DallasTemperature.h.  it is a large negative number outside the
-// operating range of the device
-float dt_getTempC(uint8_t* deviceAddress)
-{
-	// TODO: Multiple devices (up to 64) on the same bus may take some time to negotiate a response
-	// What happens in case of collision?
-
-	ScratchPad scratchPad;
-	if (dt_isConnected2(deviceAddress, scratchPad)) return dt_calculateTemperature(deviceAddress, scratchPad);
-	return DEVICE_DISCONNECTED;
-}
-
-// Fetch temperature for device index
-float dt_getTempCByIndex(uint8_t deviceIndex)
-{
-	DeviceAddress deviceAddress;
-	dt_getAddress(deviceAddress, deviceIndex);
-	return dt_getTempC((uint8_t*)deviceAddress);
-}
-
-// Convert float celsius to fahrenheit
-float dt_toFahrenheit(float celsius)
-{
-	return (celsius * 1.8) + 32;
-}
-
-// Convert float fahrenheit to celsius
-float dt_toCelsius(float fahrenheit)
-{
-	return (fahrenheit - 32) / 1.8;
-}
-
-// returns temperature in degrees F
-float dt_getTempF(uint8_t* deviceAddress)
-{
-	return dt_toFahrenheit(dt_getTempC(deviceAddress));
-}
-
-// returns true if the bus requires parasite power
-uint8_t dt_isParasitePowerMode(void)
-{
-	return parasite;
-}
 
 #endif // ENABLE_DALLAS_TEMP
 #endif //ENABLE_ONE_WIRE

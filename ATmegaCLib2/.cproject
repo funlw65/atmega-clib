@@ -26,8 +26,8 @@
 							<tool id="de.innot.avreclipse.tool.compiler.winavr.lib.release.852729208" name="AVR Compiler" superClass="de.innot.avreclipse.tool.compiler.winavr.lib.release">
 								<option id="de.innot.avreclipse.compiler.option.debug.level.203161654" name="Generate Debugging Info" superClass="de.innot.avreclipse.compiler.option.debug.level" value="de.innot.avreclipse.compiler.option.debug.level.none" valueType="enumerated"/>
 								<option id="de.innot.avreclipse.compiler.option.optimize.2024434070" name="Optimization Level" superClass="de.innot.avreclipse.compiler.option.optimize" value="de.innot.avreclipse.compiler.optimize.size" valueType="enumerated"/>
-								<option id="de.innot.avreclipse.compiler.option.optimize.other.1842810702" superClass="de.innot.avreclipse.compiler.option.optimize.other" value="-fdata-sections -ffunction-sections -mrelax" valueType="string"/>
-								<option id="de.innot.avreclipse.compiler.option.incpath.1511588421" superClass="de.innot.avreclipse.compiler.option.incpath" valueType="includePath">
+								<option id="de.innot.avreclipse.compiler.option.optimize.other.1842810702" name="Other Optimization Flags" superClass="de.innot.avreclipse.compiler.option.optimize.other" value="-fdata-sections -ffunction-sections -mrelax" valueType="string"/>
+								<option id="de.innot.avreclipse.compiler.option.incpath.1511588421" name="Include Paths (-I)" superClass="de.innot.avreclipse.compiler.option.incpath" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ATmegaCLib2}&quot;"/>
 								</option>
 								<inputType id="de.innot.avreclipse.compiler.winavr.input.2025285560" name="C Source Files" superClass="de.innot.avreclipse.compiler.winavr.input"/>
@@ -57,4 +57,5 @@
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="de.innot.avreclipse.core.AVRGCCManagedMakePerProjectProfileC"/>
 		</scannerConfigBuildInfo>
 	</storageModule>
+	<storageModule moduleId="refreshScope"/>
 </cproject>
