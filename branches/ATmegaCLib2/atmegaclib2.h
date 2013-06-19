@@ -57,7 +57,7 @@
 //#define ENABLE_SERIAL // Interrupt based, require CONVERSION, conflicts with SERIAL_POLL
 //#define ENABLE_SERIAL_POLL // require CONVERSION, conflicts with SERIAL
 //#define ENABLE_PWMSERVO    // servo control (conflicts with regular pwm)
-#define ENABLE_PWM         // motor or led control (conflicts with pwmservo)
+//#define ENABLE_PWM         // motor or led control (conflicts with pwmservo)
 //#define ENABLE_IR          // infrared receiver, SONY protocol- it use TIMER0
 //#define IR_DEBOUNCE        // uncomment to debounce IR with a delay
 //#define ENABLE_ADC         // analog to digital converter
@@ -67,7 +67,7 @@
 //#define ENABLE_PCF8583     // require CONVERSION and I2C/TWI
 //#define ENABLE_ONE_WIRE    // one wire protocol
 //#define ENABLE_DALLAS_TEMP // Dallas temperature sensors, require ONE_WIRE
-//#define ENABLE_MILLIS      // enable Arduino millis() - it use TIMER0
+#define ENABLE_NB_DELAYS // Non-blocking, slotted delays (instead of millis()) using Timer0
 //#define ENABLE_LCD         // require CONVERSION
 //#define ENABLE_7SEG        // starting from one digit, up to eight digits.
 //#define ENABLE_ISPPROG     // Use Arduino as ISP Programmer - require SPI, conflict SD_Card
@@ -79,6 +79,14 @@
 // *****************************************************************************
 // End block of "enable/disable" features
 // *****************************************************************************
+
+//Slotted delays
+#ifdef ENABLE_NB_DELAYS
+	//the following define the number of non-blocking delays.
+	// set it to the required number of non-blocking delays you need.
+	#define DELAY_SLOTS  3 // the number of nb. delays
+	int16_t isr_countdowns[DELAY_SLOTS];
+#endif
 
 // Continue with user settings, and chose your values...
 //------------------------
@@ -356,9 +364,10 @@ void onboard_led_toggle(void);
  };
  */
 
-#ifdef ENABLE_MILLIS
-void millis_init(void);
-uint32_t millis(void);
+#ifdef ENABLE_NB_DELAYS
+void timer0_isr_init(void);
+uint8_t check_delay(uint8_t slot);
+void    set_delay(uint8_t slot, uint16_t ms_time);
 #endif
 
 #ifdef ENABLE_I2C_SOFTWARE
@@ -655,60 +664,6 @@ unsigned short ow_crc16(unsigned short *data, unsigned short len);
 
 #ifdef ENABLE_DALLAS_TEMP
 // Model IDs
-#define DS18S20MODEL 0x10
-#define DS18B20MODEL 0x28
-#define DS1822MODEL  0x22
-
-// Scratchpad locations
-#define TEMP_LSB        0
-#define TEMP_MSB        1
-#define HIGH_ALARM_TEMP 2
-#define LOW_ALARM_TEMP  3
-#define CONFIGURATION   4
-#define INTERNAL_BYTE   5
-#define COUNT_REMAIN    6
-#define COUNT_PER_C     7
-#define SCRATCHPAD_CRC  8
-
-// Device resolution
-#define TEMP_9_BIT  0x1F //  9 bit
-#define TEMP_10_BIT 0x3F // 10 bit
-#define TEMP_11_BIT 0x5F // 11 bit
-#define TEMP_12_BIT 0x7F // 12 bit
-// Error Codes
-#define DEVICE_DISCONNECTED -127
-
-typedef uint8_t DeviceAddress[8];
-typedef uint8_t ScratchPad[9];
-
-// global variables
-// store the raw temperature to be converted to
-// Celsius or Fahrenheit
-uint16_t dt_rawTemperature;
-
-// function headers
-void dt_init(void);
-uint8_t dt_getDeviceCount(void);
-uint8_t dt_validAddress(uint8_t* deviceAddress);
-uint8_t dt_getAddress(uint8_t* deviceAddress, uint8_t index);
-void dt_readScratchPad(uint8_t* deviceAddress, uint8_t* scratchPad);
-uint8_t dt_isConnected2(uint8_t* deviceAddress, uint8_t* scratchPad);
-uint8_t dt_isConnected(uint8_t* deviceAddress);
-void dt_writeScratchPad(uint8_t* deviceAddress, const uint8_t* scratchPad);
-uint8_t dt_readPowerSupply(uint8_t* deviceAddress);
-uint8_t dt_getResolution(uint8_t* deviceAddress);
-void dt_setResolution(uint8_t* deviceAddress, uint8_t newResolution);
-void dt_requestTemperatures(void);
-void dt_requestTemperaturesByAddress(uint8_t* deviceAddress);
-void dt_requestTemperaturesByIndex(uint8_t deviceIndex);
-float dt_calculateTemperature(uint8_t* deviceAddress, uint8_t* scratchPad);
-float dt_getTempC(uint8_t* deviceAddress);
-float dt_getTempCByIndex(uint8_t deviceIndex);
-float dt_toFahrenheit(float celsius);
-float dt_toCelsius(float fahrenheit);
-float dt_getTempF(uint8_t* deviceAddress);
-uint8_t dt_isParasitePowerMode(void);
-
 #endif // ENABLE_DALLAS_TEMP
 #endif // ENABLE_ONE_WIRE
 #ifdef ENABLE_CONVERSION // various conversion functions
