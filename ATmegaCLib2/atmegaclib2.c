@@ -238,20 +238,25 @@ void timer0_isr_init(void) {
 // check if the time in a specific slot expired
 uint8_t check_delay(uint8_t slot)
 {
-	if (slot >= DELAY_SLOTS) return TRUE;
-	if (isr_countdowns[slot]<=0) return TRUE;
+	if (slot >= DELAY_SLOTS) return TRUE; //protection against user input error
+	uint8_t oldSREG = SREG;
+	cli();
+	if (isr_countdowns[slot]<=0){
+		SREG = oldSREG;
+		return TRUE;
+	}
+	SREG = oldSREG;
 	return FALSE;
 }
 
 //set the duration of a delay (in milliseconds) in a specific slot
 void set_delay(uint8_t slot, uint16_t ms_time){
-	if(slot >= DELAY_SLOTS) return;
+	if(slot >= DELAY_SLOTS) return; //protection against user input error
 	uint8_t oldSREG = SREG;
 
 	cli();
 	isr_countdowns[slot] = ms_time;
 	SREG = oldSREG;
-	sei();
 }
 #endif //ENABLE_NB_DELAYS
 
