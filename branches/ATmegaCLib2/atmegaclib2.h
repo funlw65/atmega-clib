@@ -466,14 +466,14 @@ uint8_t SD_erase(uint32_t SD_startBlock, uint32_t SD_totalBlocks);
 #endif // ENABLE_SD_CARD
 #ifdef ENABLE_FAT32
 
-//Structure to access Master Boot Record for getting info about partioions
+//Structure to access Master Boot Record for getting info about partitions
 struct MBRinfo_Structure {
 	uint8_t nothing[446]; //ignore, placed here to fill the gap in the structure
 	uint8_t partitionData[64]; //partition records (16x4)
 	uint16_t signature; //0xaa55
 };
 
-//Structure to access info of the first partioion of the disk
+//Structure to access info of the first partition of the disk
 struct partitionInfo_Structure {
 	uint8_t status; //0x80 - active partition
 	uint8_t headStart; //starting head
