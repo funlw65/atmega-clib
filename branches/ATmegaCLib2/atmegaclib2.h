@@ -12,6 +12,7 @@
  *  - (c) 2010 Paul Stoffregen, http://www.pjrc.com/teensy/td_libs_OneWire.html
  *  - (c) 2010 Chennai Dharmani, http://www.dharmanitech.com
  *  - (c) 2011 Joe Pardue, http://code.google.com/p/avrtoolbox/
+ *  - (c) 2011 Martin Thomas, http://www.siwawi.arubi.uni-kl.de/avr-projects/
  *  - (c) 2012 Vasile Guta Ciucur, https://sites.google.com/site/funlw65/
  *
  *******************************************************************************
@@ -52,10 +53,10 @@
 // *****************************************************************************
 // Enabling/disabling additional functionality
 // *****************************************************************************
-//#define UART_BAUD_RATE			57600 // default is 57600
-//#define UART_BAUD_SELECT		(F_CPU / (UART_BAUD_RATE * 16L) - 1)
+#define UART_BAUD_RATE			57600 // default is 57600
+#define UART_BAUD_SELECT		(F_CPU / (UART_BAUD_RATE * 16L) - 1)
 //#define ENABLE_SERIAL // Interrupt based, require CONVERSION, conflicts with SERIAL_POLL
-//#define ENABLE_SERIAL_POLL // require CONVERSION, conflicts with SERIAL
+#define ENABLE_SERIAL_POLL // require CONVERSION, conflicts with SERIAL
 //#define ENABLE_PWMSERVO    // servo control (conflicts with regular pwm)
 //#define ENABLE_PWM         // motor or led control (conflicts with pwmservo)
 //#define ENABLE_IR          // infrared receiver, SONY protocol- it use TIMER0
@@ -63,11 +64,11 @@
 //#define ENABLE_ADC         // analog to digital converter
 //#define ENABLE_TWI         // hardware I2C
 //#define ENABLE_I2C_SOFTWARE // software I2C
-//#define ENABLE_CONVERSION    // useful for Serial, LCD and 7SEG Display
+#define ENABLE_CONVERSION    // useful for Serial, LCD and 7SEG Display
 //#define ENABLE_PCF8583     // require CONVERSION and I2C/TWI
-//#define ENABLE_ONE_WIRE    // one wire protocol
-//#define ENABLE_DALLAS_TEMP // Dallas temperature sensors, require ONE_WIRE
-#define ENABLE_NB_DELAYS // Non-blocking, slotted delays (instead of millis()) using Timer0
+#define ENABLE_ONE_WIRE    // one wire protocol
+#define ENABLE_DS18_2_ // Dallas temperature sensors, require ONE_WIRE
+//#define ENABLE_NB_DELAYS // Non-blocking, slotted delays (instead of millis()) using Timer0
 //#define ENABLE_LCD         // require CONVERSION
 //#define ENABLE_7SEG        // starting from one digit, up to eight digits.
 //#define ENABLE_ISPPROG     // Use Arduino as ISP Programmer - require SPI, conflict SD_Card
@@ -82,10 +83,10 @@
 
 //Slotted delays
 #ifdef ENABLE_NB_DELAYS
-	//the following define the number of non-blocking delays.
-	// set it to the required number of non-blocking delays you need.
-	#define DELAY_SLOTS  3 // the number of nb. delays
-	int16_t isr_countdowns[DELAY_SLOTS];
+//the following define the number of non-blocking delays.
+// set it to the required number of non-blocking delays you need.
+#define DELAY_SLOTS  3 // the number of nb. delays
+int16_t isr_countdowns[DELAY_SLOTS];
 #endif
 
 // Continue with user settings, and chose your values...
@@ -128,35 +129,55 @@
 #endif //ENABLE_FAT32
 //set 1 wire pin
 #ifdef ENABLE_ONE_WIRE
+// Define OW_ONE_BUS if only one 1-Wire-Bus is used
+// in the application -> shorter code.
+// If not defined make sure to call ow_set_bus() before using
+// a bus. Runtime bus-select increases code size by around 300
+// bytes so use OW_ONE_BUS if possible
+#define OW_ONE_BUS
+
+#ifdef OW_ONE_BUS
 #define OW_PIN  PD7
 #define OW_IN   PIND
 #define OW_DDR  DDRD
 #define OW_OUT  PORTD
+#define OW_CONF_DELAYOFFSET 0
 
-// you can exclude onewire_search by defining that to 0
-#ifndef ONEWIRE_SEARCH
-#define ONEWIRE_SEARCH 1
-#endif
+#else
 
-// You can exclude CRC checks altogether by defining this to 0
-#ifndef ONEWIRE_CRC
-#define ONEWIRE_CRC 1
+#if ( F_CPU < 1843200 )
+#warning | Experimental multi-bus-mode is not tested for
+#warning | frequencies below 1,84MHz. Use OW_ONE_WIRE or
+#warning | faster clock-source (i.e. internal 2MHz R/C-Osc.).
 #endif
+#define OW_CONF_CYCLESPERACCESS 13
+#define OW_CONF_DELAYOFFSET ( (uint16_t)( ((OW_CONF_CYCLESPERACCESS) * 1000000L) / F_CPU ) )
+#endif //OW_ONE_BUS
+// Recovery time (T_Rec) minimum 1usec - increase for long lines
+// 5 usecs is a value give in some Maxim AppNotes
+// 30u secs seem to be reliable for longer lines
+//#define OW_RECOVERY_TIME        5  // usec
+//#define OW_RECOVERY_TIME       30 // usec
+#define OW_RECOVERY_TIME         10 // usec
 
-// Select the table-lookup method of computing the 8-bit CRC
-// by setting this to 1.  The lookup table no longer consumes
-// limited RAM, but enlarges total code size by about 250 bytes
-#ifndef ONEWIRE_CRC8_TABLE
-#define ONEWIRE_CRC8_TABLE 0
-#endif
-
-// You can allow 16-bit CRC checks by defining this to 1
-// (Note that ONEWIRE_CRC must also be 1.)
-#ifndef ONEWIRE_CRC16
-#define ONEWIRE_CRC16 0
-#endif
-#endif
-
+// Use AVR's internal pull-up resistor instead of external 4,7k resistor.
+// Based on information from Sascha Schade. Experimental but worked in tests
+// with one DS18B20 and one DS18S20 on a rather short bus (60cm), where both
+// sensors have been parasite-powered.
+#define OW_USE_INTERNAL_PULLUP    0  // 0=external, 1=internal
+//
+#ifdef ENABLE_DS18_2_
+// DS18x20 EERPROM support disabled(0) or enabled(1) :
+#define DS18X20_EEPROMSUPPORT     0
+// decicelsius functions disabled(0) or enabled(1):
+#define DS18X20_DECICELSIUS       1
+// max. resolution functions disabled(0) or enabled(1):
+#define DS18X20_MAX_RESOLUTION    0
+// extended output via UART disabled(0) or enabled(1) :
+#define DS18X20_VERBOSE           0 //require serial comm.
+#endif //ENABLE_DS18_2_
+#endif //ENABLE_ONE_WIRE
+//
 #ifdef ENABLE_LCD
 // Define the specific ports and pins used for the LCD
 #define LCD_D4_PORT PORTD
@@ -338,36 +359,10 @@ void onboard_led_on(void);
 void onboard_led_off(void);
 void onboard_led_toggle(void);
 
-/*typedef struct
- {
- uint8_t second;
- uint8_t minute;
- uint8_t hour;
- uint8_t day;
- uint8_t month;
- uint16_t year;
- } struct_time;
-
- // ---------------------------------------------------------------
-
-
- struct u16bytes
- {
- uint8_t low, high;
- };
-
- // Union to facilitate the conversion of byte 16-bit word
- union u16convert
- {
- uint16_t value;
- struct u16bytes bytes;
- };
- */
-
 #ifdef ENABLE_NB_DELAYS
 void timer0_isr_init(void);
 uint8_t check_delay(uint8_t slot);
-void    set_delay(uint8_t slot, uint16_t ms_time);
+void set_delay(uint8_t slot, uint16_t ms_time);
 #endif
 
 #ifdef ENABLE_I2C_SOFTWARE
@@ -403,7 +398,6 @@ void TWI_stop(void);
 
 #endif // ENABLE_TWI
 #ifdef ENABLE_SPI //In preparation of porting ArduinoISP sketch
-
 #ifdef ENABLE_ISPPROG
 #define SPI_ISP uint8_t x; SPCR = 0x53; x = SPSR; x = SPDR
 #else
@@ -418,8 +412,6 @@ void TWI_stop(void);
 // |  0   |  1  |  0   |  1   |  0   |  0   |  0   |  0   | = 0x50
 #define SPI_HIGH_SPEED       SPCR = 0x50; SPSR |= (1<<SPI2X)
 #endif //ISPPROG
-
-
 void SPI_master_init(void);
 uint8_t SPI_master_transmit(uint8_t);
 uint8_t SPI_master_receive(void);
@@ -603,77 +595,160 @@ void F32_displayMemory(uint8_t flag, uint32_t memory);
 void F32_deleteFile(uint8_t *fileName);
 void F32_freeMemoryUpdate(uint8_t flag, uint32_t size);
 #endif //ENABLE_FAT32
+//
 #ifdef ENABLE_ONE_WIRE
-/* As you know, on Arduino library you set the OneWire pin using the Arduino virtual pin number
- or, we need the real, hardware pin and port.
- We do equivalences for the following Arduino OneWire library definitions:
- #define DIRECT_READ(base, mask)		(((*(base)) & (mask)) ? 1 : 0) ==> OW_GET_IN()
- #define DIRECT_MODE_INPUT(base, mask)	((*(base+1)) &= ~(mask))   ==> OW_DIR_IN()
- #define DIRECT_MODE_OUTPUT(base, mask)	((*(base+1)) |= (mask))  ==> OW_DIR_OUT()
- #define DIRECT_WRITE_LOW(base, mask)	((*(base+2)) &= ~(mask))   ==> OW_OUT_LOW()
- #define DIRECT_WRITE_HIGH(base, mask)	((*(base+2)) |= (mask))    ==> OW_OUT_HIGH()
- // also, in order of appearance :
- //  - base   = OW_IN,  mask = OW_PIN (always)
- //  - base+1 = OW_DDR, ... for both DIRECT_MODE_INPUT and OUTPUT
- //  - base+2 = OW_OUT, ... for both DIRECT_WRITE_LOW and HIGH
- // where,
- // - OW_PIN is the bit/pin on which the wire is connected, PD7 eg.   - user-defined value
- // - OW_IN  is the port input to be read,                  PIND eg,  - -""-
- // - OW_DDR is the register for setting pin direction,     DDRD eg,  - -""-
- // - OW_OUT is the port output to write to,                PORTD eg, - -""-
- */
+#define OW_MATCH_ROM    0x55
+#define OW_SKIP_ROM     0xCC
+#define OW_SEARCH_ROM   0xF0
 
-#define OW_GET_IN()   (OW_IN  &  bit(OW_PIN) ? 1 : 0)  // DIRECT_READ
-#define OW_DIR_IN()   (OW_DDR &= ~(bit(OW_PIN))) // DIRECT_MODE_INPUT
-#define OW_DIR_OUT()  (OW_DDR |= bit(OW_PIN))  // DIRECT_MODE_OUTPUT
-#define OW_OUT_LOW()  (OW_OUT &= ~(bit(OW_PIN))) // DIRECT_WRITE_LOW
-#define OW_OUT_HIGH() (OW_OUT |= bit(OW_PIN))  // DIRECT_WRITE_HIGH
-// ROM Commands
-#define OW_MATCH_ROM        0x55
-#define OW_SKIP_ROM         0xCC
-#define OW_SEARCH_ROM       0xF0
-#define OW_READ_ROM         0x33
-#define OW_ALARM_SEARCH     0xEC
-// Function Commands
-#define OW_CONVERT_T        0x44
-#define OW_COPY_SCRATCHPAD  0x48
-#define OW_READ_SCRATCHPAD  0xBE
-#define OW_WRITE_SCRATCHPAD 0x4E
-#define OW_RECALL_E2        0xB8
-#define OW_READ_POWER_SRC   0xB4
+#define OW_SEARCH_FIRST 0xFF        // start new search
+#define OW_PRESENCE_ERR 0xFF
+#define OW_DATA_ERR     0xFE
+#define OW_LAST_DEVICE  0x00        // last device found
+// rom-code size including CRC
+#define OW_ROMCODE_SIZE 8
 
-//OneWire functions
 uint8_t ow_reset(void);
-void ow_write_bit(uint8_t v);
-uint8_t ow_read_bit(void);
-void ow_write_byte(uint8_t v, uint8_t power /* = 0 */);
-uint8_t ow_read_byte();
-void ow_select_rom( uint8_t rom[8]);
-void ow_skip_rom();
-void ow_depower();
-#if ONEWIRE_SEARCH
-void ow_reset_search();
-uint8_t ow_search(uint8_t *newAddr);
-#endif
-#if ONEWIRE_CRC
-uint8_t ow_crc8( uint8_t *addr, uint8_t len);
-#if ONEWIRE_CRC16
-unsigned short ow_crc16(unsigned short *data, unsigned short len);
-#endif
+
+uint8_t ow_bit_io(uint8_t b);
+uint8_t ow_byte_wr(uint8_t b);
+uint8_t ow_byte_rd(void);
+
+uint8_t ow_rom_search(uint8_t diff, uint8_t *id);
+
+void ow_command(uint8_t command, uint8_t *id);
+void ow_command_with_parasite_enable(uint8_t command, uint8_t *id);
+
+void ow_parasite_enable(void);
+void ow_parasite_disable(void);
+uint8_t ow_input_pin_state(void);
+
+#ifndef OW_ONE_BUS
+void ow_set_bus( volatile uint8_t* in,
+		volatile uint8_t* out,
+		volatile uint8_t* ddr,
+		uint8_t pin );
 #endif
 
-#ifdef ENABLE_DALLAS_TEMP
-// Model IDs
-#endif // ENABLE_DALLAS_TEMP
+#ifdef ENABLE_DS18_2_
+uint8_t crc8(uint8_t* data, uint16_t number_of_bytes_in_data);
+//
+
+// return values
+#define DS18X20_OK                0x00
+#define DS18X20_ERROR             0x01
+#define DS18X20_START_FAIL        0x02
+#define DS18X20_ERROR_CRC         0x03
+
+#define DS18X20_INVALID_DECICELSIUS  2000
+
+#define DS18X20_POWER_PARASITE    0x00
+#define DS18X20_POWER_EXTERN      0x01
+
+#define DS18X20_CONVERSION_DONE   0x00
+#define DS18X20_CONVERTING        0x01
+
+// DS18X20 specific values (see datasheet)
+#define DS18S20_FAMILY_CODE       0x10
+#define DS18B20_FAMILY_CODE       0x28
+#define DS1822_FAMILY_CODE        0x22
+
+#define DS18X20_CONVERT_T         0x44
+#define DS18X20_READ              0xBE
+#define DS18X20_WRITE             0x4E
+#define DS18X20_EE_WRITE          0x48
+#define DS18X20_EE_RECALL         0xB8
+#define DS18X20_READ_POWER_SUPPLY 0xB4
+
+#define DS18B20_CONF_REG          4
+#define DS18B20_9_BIT             0
+#define DS18B20_10_BIT            (1<<5)
+#define DS18B20_11_BIT            (1<<6)
+#define DS18B20_12_BIT            ((1<<6)|(1<<5))
+#define DS18B20_RES_MASK          ((1<<6)|(1<<5))
+
+// undefined bits in LSB if 18B20 != 12bit
+#define DS18B20_9_BIT_UNDF        ((1<<0)|(1<<1)|(1<<2))
+#define DS18B20_10_BIT_UNDF       ((1<<0)|(1<<1))
+#define DS18B20_11_BIT_UNDF       ((1<<0))
+#define DS18B20_12_BIT_UNDF       0
+
+// conversion times in milliseconds
+#define DS18B20_TCONV_12BIT       750
+#define DS18B20_TCONV_11BIT       DS18B20_TCONV_12_BIT/2
+#define DS18B20_TCONV_10BIT       DS18B20_TCONV_12_BIT/4
+#define DS18B20_TCONV_9BIT        DS18B20_TCONV_12_BIT/8
+#define DS18S20_TCONV             DS18B20_TCONV_12_BIT
+
+// constant to convert the fraction bits to cel*(10^-4)
+#define DS18X20_FRACCONV          625
+
+// scratchpad size in bytes
+#define DS18X20_SP_SIZE           9
+
+// DS18X20 EEPROM-Support
+#define DS18X20_WRITE_SCRATCHPAD  0x4E
+#define DS18X20_COPY_SCRATCHPAD   0x48
+#define DS18X20_RECALL_E2         0xB8
+#define DS18X20_COPYSP_DELAY      10 /* ms */
+#define DS18X20_TH_REG            2
+#define DS18X20_TL_REG            3
+
+#define DS18X20_DECIMAL_CHAR      '.'
+
+extern uint8_t DS18X20_find_sensor(uint8_t *diff, uint8_t id[]);
+extern uint8_t DS18X20_get_power_status(uint8_t id[]);
+extern uint8_t DS18X20_start_meas(uint8_t with_external, uint8_t id[]);
+// returns 1 if conversion is in progress, 0 if finished
+// not available when parasite powered
+extern uint8_t DS18X20_conversion_in_progress(void);
+
+#if DS18X20_DECICELSIUS
+extern uint8_t DS18X20_read_decicelsius(uint8_t id[], int16_t *decicelsius);
+extern uint8_t DS18X20_read_decicelsius_single(uint8_t familycode,
+		int16_t *decicelsius);
+extern uint8_t DS18X20_format_from_decicelsius(int16_t decicelsius, int8_t s[],
+		uint8_t n);
+#endif // DS18X20_DECICELSIUS
+
+#if DS18X20_MAX_RESOLUTION
+// temperature unit for max. resolution is °C * 10e-4
+// examples: -250625 -> -25.0625°C, 1250000 -> 125.0000 °C
+extern uint8_t DS18X20_read_maxres(uint8_t id[], int32_t *temperaturevalue);
+extern uint8_t DS18X20_read_maxres_single(uint8_t familycode,
+		int32_t *temperaturevalue);
+extern uint8_t DS18X20_format_from_maxres(int32_t temperaturevalue, char s[],
+		uint8_t n);
+#endif // DS18X20_MAX_RESOLUTION
+
+#if DS18X20_EEPROMSUPPORT
+// write th, tl and config-register to scratchpad (config ignored on DS18S20)
+uint8_t DS18X20_write_scratchpad(uint8_t id[], uint8_t th, uint8_t tl,
+		uint8_t conf);
+// read scratchpad into array SP
+uint8_t DS18X20_read_scratchpad(uint8_t id[], uint8_t sp[], uint8_t n);
+// copy values int scratchpad into DS18x20 eeprom
+uint8_t DS18X20_scratchpad_to_eeprom(uint8_t with_power_extern, uint8_t id[]);
+// copy values from DS18x20 eeprom into scratchpad
+uint8_t DS18X20_eeprom_to_scratchpad(uint8_t id[]);
+#endif // DS18X20_EEPROMSUPPORT
+
+#if DS18X20_VERBOSE
+extern void DS18X20_show_id_uart(uint8_t *id, size_t n);
+extern uint8_t DS18X20_read_meas_all_verbose(void);
+#endif // DS18X20_VERBOSE
+
+#endif // ENABLE_DS18_20_
 #endif // ENABLE_ONE_WIRE
+//--
 #ifdef ENABLE_CONVERSION // various conversion functions
 uint8_t bcd2bin(uint8_t bcd);
 uint8_t bin2bcd(uint8_t bin);
 uint8_t nibble2hex(uint8_t val);
-void byte2hex(uint8_t val, uint8_t *s);
-void word2hex(uint16_t val, uint8_t *s);
-void double2hex(uint32_t val, uint8_t *s);
-void byte2dec(uint8_t val, uint8_t *s);
+void byte2hex(uint8_t val, int8_t *s);
+void word2hex(uint16_t val, int8_t *s);
+void double2hex(uint32_t val, int8_t *s);
+void byte2dec(uint8_t val, int8_t *s);
 #endif // end Conversion
 #ifdef ENABLE_SERIAL // serial with interrupts...
 #ifdef USART0_RX_vect // if uC with more than one Serial peripheral ...
@@ -689,22 +764,25 @@ void serial_flush(void);
 #endif // end Serial
 #ifdef ENABLE_SERIAL_POLL
 void serial_init(void);
-uint8_t serial_getchar( void );
+uint8_t serial_getchar(void);
 #endif // end Serial Poll
 #if defined(ENABLE_SERIAL) || defined(ENABLE_SERIAL_POLL)
 #define UART0_DATA	UDR0
 
 void serial_putchar(uint8_t data);
-void serial_putstr(uint8_t *s); // send a string from SRAM
-void serial_putstr_f(uint8_t *s); // send a string from Flash memory
+#define serial_putc(c__) serial_putchar((uint8_t)c__)
+void serial_putstr(int8_t *s); // send a string from SRAM
+#define serial_puts(s__) serial_putstr((int8_t *)s__)
+void serial_putstr_f(int8_t *s); // send a string from Flash memory
+#define serial_puts_f(s__) serial_putstr_f((int8_t *)PSTR(s__))
 //void serial_putstr_e(uint8_t *s);   // send a string from EEPROM
-void serial_putint(int value, uint8_t radix);
+void serial_putint(int value);
 void serial_putU08(uint8_t value); // display a byte
 void serial_puthexU08(uint8_t value); // display a byte in hex value
 void serial_puthexU16(uint16_t value); // display a word in hex value
-void serial_puthexU32(uint32_t value); // dusplay a double in hex value
+void serial_puthexU32(uint32_t value); // display a double in hex value
 
-#define TX_NEWLINE {serial_putchar(0x0d); serial_putchar(0x0a);}
+#define TX_NEWLINE {serial_putc(0x0d); serial_putc(0x0a);}
 // required by Dharmani's SD_Card functions... not sure, here would be nice to
 // have setting for Linux and Mac, as now is only  for Windows termination line...
 // Anyway, I think is ok, as long as is about a FAT32 file system.
@@ -755,7 +833,6 @@ void adc_init(uint8_t adc_reference, uint8_t adc_prescaler);
 uint16_t adc_get(uint8_t adcnum);
 void adc_poweroff_digital_pinbuffer(uint8_t adcnum);
 #endif //adc
-
 #ifdef ENABLE_LCD
 #ifdef LCD_1X8
 #define LCD_COLUMN      8
@@ -864,14 +941,17 @@ void adc_poweroff_digital_pinbuffer(uint8_t adcnum);
 void lcd_init(void);
 void lcd_clear(void);
 void lcd_home();
-void lcd_putchar( uint8_t d );
-void lcd_putstr(uint8_t *);
-void lcd_putstr_f(const uint8_t *);
-void lcd_putint(int value, uint8_t radix);
+void lcd_putchar(uint8_t d);
+#define lcd_putc(c__) lcd_putchar((uint8_t)c__)
+void lcd_putstr(int8_t *);
+#define lcd_puts(s__) lcd_putstr((int8_t *)s__)
+void lcd_putstr_f(int8_t *);
+#define lcd_puts_f(s__) lcd_putstr_f((int8_t *)PSTR(s__))
+void lcd_putint(int value);
 void lcd_putU08(uint8_t value); // display a byte
-void lcd_puthexU08(uint8_t value);// display a byte in hex value
-void lcd_puthexU16(uint16_t value);// display a word in hex value
-void lcd_blank( uint8_t len );// blank n digits
+void lcd_puthexU08(uint8_t value); // display a byte in hex value
+void lcd_puthexU16(uint16_t value); // display a word in hex value
+void lcd_blank(uint8_t len); // blank n digits
 void lcd_cursor_on(void);
 void lcd_cursor_off(void);
 void lcd_blink_on(void);
@@ -884,7 +964,7 @@ void lcd_display_off(void);
  static void lcd_nibble( uint8_t d );
  static void lcd_byte( uint8_t d );
  */
-void lcd_command( uint8_t d );
+void lcd_command(uint8_t d);
 
 // commands
 #define LCD_CLEARDISPLAY 0x01
@@ -939,20 +1019,19 @@ typedef enum mydigit {
 	SELECT_DIGIT_SIX = 32,
 	SELECT_DIGIT_SEVEN = 64,
 	SELECT_DIGIT_EIGHT = 128
-}MyDigit;
+} MyDigit;
 
 void seg_init(void);
 uint8_t seg_digit_from_array(uint8_t index);
 void seg_nibble(uint8_t);
 void seg_common_select(uint8_t);
-void seg_select_digit(uint8_t,uint8_t);
+void seg_select_digit(uint8_t, uint8_t);
 #endif //7-seg
-
 #ifdef ENABLE_PCF8583 //it requires Hardware or Software I2C
 uint8_t PCF8583_read(uint8_t address);
-void PCF8583_write(uint8_t address,uint8_t data);
+void PCF8583_write(uint8_t address, uint8_t data);
 uint8_t PCF8583_read_bcd(uint8_t address);
-void PCF8583_write_bcd(uint8_t address,uint8_t data);
+void PCF8583_write_bcd(uint8_t address, uint8_t data);
 uint8_t PCF8583_get_status(void);
 void PCF8583_init(void);
 void PCF8583_stop(void);
@@ -961,16 +1040,18 @@ void PCF8583_hold_off(void);
 void PCF8583_hold_on(void);
 void PCF8583_alarm_off(void);
 void PCF8583_alarm_on(void);
-void PCF8583_write_word(uint8_t address,uint16_t data);
-void PCF8583_write_date(uint8_t address,uint8_t day,uint16_t year);
-void PCF8583_get_time(uint8_t *hour,uint8_t *min,uint8_t *sec,uint8_t *hsec);
-void PCF8583_set_time(uint8_t hour,uint8_t min,uint8_t sec,uint8_t hsec);
-void PCF8583_get_date(uint8_t *day,uint8_t *month,uint16_t *year);
-void PCF8583_set_date(uint8_t day,uint8_t month,uint16_t year);
-void PCF8583_get_alarm_time(uint8_t *hour,uint8_t *min,uint8_t *sec,uint8_t *hsec);
-void PCF8583_set_alarm_time(uint8_t hour,uint8_t min,uint8_t sec,uint8_t hsec);
-void PCF8583_get_alarm_date(uint8_t *day,uint8_t *month);
-void PCF8583_set_alarm_date(uint8_t day,uint8_t month);
+void PCF8583_write_word(uint8_t address, uint16_t data);
+void PCF8583_write_date(uint8_t address, uint8_t day, uint16_t year);
+void PCF8583_get_time(uint8_t *hour, uint8_t *min, uint8_t *sec, uint8_t *hsec);
+void PCF8583_set_time(uint8_t hour, uint8_t min, uint8_t sec, uint8_t hsec);
+void PCF8583_get_date(uint8_t *day, uint8_t *month, uint16_t *year);
+void PCF8583_set_date(uint8_t day, uint8_t month, uint16_t year);
+void PCF8583_get_alarm_time(uint8_t *hour, uint8_t *min, uint8_t *sec,
+		uint8_t *hsec);
+void PCF8583_set_alarm_time(uint8_t hour, uint8_t min, uint8_t sec,
+		uint8_t hsec);
+void PCF8583_get_alarm_date(uint8_t *day, uint8_t *month);
+void PCF8583_set_alarm_date(uint8_t day, uint8_t month);
 #endif //ENABLE_PCF8583
 //Now, the following list of microcontrollers must meet some conditions:
 // 1. Must be supported by avr-gcc 4.7.2 and avr-libc 1.8 (svn 2291 or newer)
