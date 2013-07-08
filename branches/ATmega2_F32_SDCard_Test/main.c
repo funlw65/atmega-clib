@@ -38,7 +38,7 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-// Activate the following definitions on "atmegaclib.h" header, not here:
+// Activate the following definitions on "atmegaclib2.h" header, not here:
 //#define UART_BAUD_RATE      57600 // default is 57600
 //#define UART_BAUD_SELECT    (F_CPU / (UART_BAUD_RATE * 16L) - 1)
 //#define ENABLE_SERIAL       // require CONVERSION, conflicts with SERIAL_POLL
@@ -46,6 +46,11 @@
 //#define ENABLE_SPI          // hardware SPI (master)
 //#define ENABLE_SD_CARD      // raw SD Card operations; require SPI
 //#define ENABLE_FAT32        // require PCF8583, SPI and SD_CARD
+
+//Scroll down the header file (don't cross the user zone) and make the required
+// settings for the CS (chip  select) pin, according to your schematics. IS
+// inside "#ifdef ENABLE_SD_CARD" conditionals ...
+
 #ifndef F_CPU
 #define F_CPU 16000000U // required by Atmel Studio 6
 #endif
@@ -83,7 +88,12 @@ int main(void) {
 	SPI_master_init();
 	sei();
 
-	onboard_led_enable();
+	onboard_led_enable(); // onboard LED used as visual indicator of an error.
+	                      // Is useless on standard Arduino board because it
+	                      // conflicts with SPI (BAD design - one of the things
+	                      // which must be corrected when Arduino team will have
+	                      // enough courage to redesign the Arduino board, even
+	                      // if that means breaking the shield compatibility)
 	onboard_led_off(); //keep user LED off for now
 
 	//initialize the dataString buffer
