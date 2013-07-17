@@ -85,8 +85,13 @@ int main(void) {
 	_delay_ms(100); //delay for VCC stabilization
 
 	serial_init();
+
+	SPI_master_setDataMode(SPI_MODE0);
+	SPI_master_setBitOrder(MSBFIRST);
+	// Clock Divider can be 2,4,8,16,32,64, or 128
+	SPI_master_setClockDivider(SPI_CLOCK_DIV64);
 	SPI_master_init();
-	sei();
+	//sei();
 
 	onboard_led_enable(); // onboard LED used as visual indicator of an error.
 	                      // Is useless on standard Arduino board because it
