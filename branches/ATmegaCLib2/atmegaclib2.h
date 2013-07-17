@@ -53,7 +53,7 @@
 // *****************************************************************************
 // Enabling/disabling additional functionality
 // *****************************************************************************
-#define UART_BAUD_RATE			57600 // default is 57600
+#define UART_BAUD_RATE			19200 // default is 57600
 #define UART_BAUD_SELECT		(F_CPU / (UART_BAUD_RATE * 16L) - 1)
 //#define ENABLE_SERIAL // Interrupt based, require CONVERSION, conflicts with SERIAL_POLL
 #define ENABLE_SERIAL_POLL // require CONVERSION, conflicts with SERIAL
@@ -66,16 +66,17 @@
 //#define ENABLE_I2C_SOFTWARE // software I2C
 #define ENABLE_CONVERSION    // useful for Serial, LCD and 7SEG Display
 //#define ENABLE_PCF8583     // require CONVERSION and I2C/TWI
-#define ENABLE_ONE_WIRE    // one wire protocol
-#define ENABLE_DS18_2_ // Dallas temperature sensors, require ONE_WIRE
+//#define ENABLE_ONE_WIRE    // one wire protocol
+//#define ENABLE_DS18_2_ // Dallas temperature sensors, require ONE_WIRE
 //#define ENABLE_NB_DELAYS // Non-blocking, slotted delays (instead of millis()) using Timer0
 //#define ENABLE_LCD         // require CONVERSION
 //#define ENABLE_7SEG        // starting from one digit, up to eight digits.
 //#define ENABLE_ISPPROG     // Use Arduino as ISP Programmer - require SPI, conflict SD_Card
-//#define ENABLE_SPI         // hardware SPI (master)
+#define ENABLE_SPI         // hardware SPI (master)
+//#define ENABLE_SPI_INT     // hardware SPI use Interrupts
 //#define ENABLE_SD_CARD_DEBUG // SD_ and F32_ functions send info on serial console
-//#define ENABLE_SD_CARD       // raw SD Card operations; require SPI
-//#define ENABLE_FAT32         // require PCF8583, SPI and SD_CARD
+#define ENABLE_SD_CARD       // raw SD Card operations; require SPI
+#define ENABLE_FAT32         // require PCF8583, SPI and SD_CARD
 //#define OPTIMIZE_SPEED
 // *****************************************************************************
 // End block of "enable/disable" features
@@ -89,14 +90,81 @@
 int16_t isr_countdowns[DELAY_SLOTS];
 #endif
 
+#ifdef ENABLE_ISPPROG
+// DEFINE 3 LEDS INDICATORS FOR THE ISP PROGRAMMER
+// TODO: To change the Heart Beat LED assignment because it must be a PWM channel!!!
+#if defined(__AVR_ATmega16__)      || \
+    defined(__AVR_ATmega164P__)    || \
+    defined(__AVR_ATmega32__)      || \
+    defined(__AVR_ATmega324P__)    || \
+    defined(__AVR_ATmega324PA__)   || \
+    defined(__AVR_ATmega644__)     || \
+    defined(__AVR_ATmega644P__)    || \
+    defined(__AVR_ATmega1284P__)
+	//pinMode(LED_PMODE, OUTPUT);
+#define LED_HB    PD5 // LED HEART BEAT
+#define LED_ERR   PC6 // LED ERROR
+#define LED_PMODE PC7 // LED PROGRAMMING MODE
+#define RESET     PB2
+//--
+#define LED_HB_PORT    PORTD
+#define LED_ERR_PORT   PORTC
+#define LED_PMODE_PORT PORTC
+#define RESET_PORT     PORTB
+//--
+#define LED_HB_DDR    DDRD
+#define LED_ERR_DDR   DDRC
+#define LED_PMODE_DDR DDRC
+#define RESET_DDR     DDRB
+//--
+#elif defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__) // Arduino Mega1280
+#define LED_HB    PC6 // LED HEART BEAT
+#define LED_ERR   PD5 // LED ERROR
+#define LED_PMODE PC7 // LED PROGRAMMING MODE
+#define RESET     PB2
+//--
+#define LED_HB_PORT    PORTC
+#define LED_ERR_PORT   PORTD
+#define LED_PMODE_PORT PORTC
+#define RESET_PORT     PORTB
+//--
+#define LED_HB_DDR    DDRC
+#define LED_ERR_DDR   DDRD
+#define LED_PMODE_DDR DDRC
+#define RESET_DDR     DDRB
+//--
+#elif defined(__AVR_ATmega48__)    || \
+    defined(__AVR_ATmega88__)      || \
+    defined(__AVR_ATmega88P__)     || \
+    defined(__AVR_ATmega168__)     || \
+    defined(__AVR_ATmega168P__)    || \
+    defined(__AVR_ATmega328P__)   // Arduino 28 pins
+#define LED_HB    PB1 // LED HEART BEAT
+#define LED_ERR   PB0 // LED ERROR
+#define LED_PMODE PD7 // LED PROGRAMMING MODE
+#define RESET     PB2
+//--
+#define LED_HB_PORT    PORTB
+#define LED_ERR_PORT   PORTB
+#define LED_PMODE_PORT PORTD
+#define RESET_PORT     PORTB
+//--
+#define LED_HB_DDR    DDRB
+#define LED_ERR_DDR   DDRB
+#define LED_PMODE_DDR DDRD
+#define RESET_DDR     DDRB
+//--
+#endif
+#endif // ENABLE_ISPPROG
+
 // Continue with user settings, and chose your values...
 //------------------------
 // I2C port and pin selection - at your choice.
 //------------------------
 #ifdef ENABLE_I2C_SOFTWARE
-#define I2C_PORT 	PORTC	//port for I2C line (PORTC)
-#define I2C_SDA		PC1 	//pin  for SDA line (PC1)
-#define I2C_SCL		PC0	  //pin  for SCL line (PC0)
+#define I2C_PORT PORTC	//port for I2C line (PORTC)
+#define I2C_SDA  PC1 	//pin  for SDA line (PC1)
+#define I2C_SCL  PC0	  //pin  for SCL line (PC0)
 #endif
 
 #ifdef ENABLE_TWI
@@ -110,7 +178,7 @@ int16_t isr_countdowns[DELAY_SLOTS];
 #define TWI_FREQ TWI_STANDARD_SPEED
 #endif //ENABLE_TWI
 #if defined(ENABLE_SERIAL)// interrupt based
-#define UART_BUFFER_SIZE  16 // buffer size for USART RX (receiving)
+#define UART_BUFFER_SIZE  64 // buffer size for USART RX (receiving)
 // change it to your needs (16, 32, 64, 128)
 #endif
 
@@ -120,9 +188,9 @@ int16_t isr_countdowns[DELAY_SLOTS];
 //default is set for atmega168p/328p (PB2) but it is an ongoing project,
 //tested with different micro controllers so, the settings can vary from a
 // SVN update to another...
-#define SD_CS_DDR	  DDRB
-#define SD_CS_PORT	PORTB
-#define SD_CS_PIN	  PB2
+#define SD_CS_DDR  DDRB
+#define SD_CS_PORT PORTB
+#define SD_CS_PIN  PB4
 #endif //ENABLE_SD_CARD
 #ifdef ENABLE_FAT32
 #define MAX_STRING_SIZE     100 //defining the maximum size of the dataString
@@ -324,6 +392,8 @@ uint8_t SEG_DIGITS_BUFFER[4];
 
 #define FALSE 0
 #define TRUE  1
+#define HIGH  1
+#define LOW   0
 
 // stolen from and-tech.pl in attempt to use some of their functions
 #define cbi(PORT, BIT) (_SFR_BYTE(PORT) &= ~_BV(BIT))// clear bit
@@ -398,9 +468,95 @@ void TWI_stop(void);
 
 #endif // ENABLE_TWI
 #ifdef ENABLE_SPI //In preparation of porting ArduinoISP sketch
-#ifdef ENABLE_ISPPROG
-#define SPI_ISP uint8_t x; SPCR = 0x53; x = SPSR; x = SPDR
-#else
+
+#ifdef ENABLE_SPI_INT
+volatile uint8_t SPI_TC;
+#endif
+
+//SETTING "pinout" depending on microcontroller
+#if defined(__AVR_ATmega16__)    || \
+    defined(__AVR_ATmega164P__)    || \
+    defined(__AVR_ATmega32__)      || \
+    defined(__AVR_ATmega324P__)    || \
+    defined(__AVR_ATmega324PA__)   || \
+    defined(__AVR_ATmega644__)     || \
+    defined(__AVR_ATmega644P__)    || \
+    defined(__AVR_ATmega1284P__)
+
+#define SCK      PB7
+#define SCK_PORT PORTB
+#define SCK_DDR  DDRB
+
+#define MOSI      PB5
+#define MOSI_PORT PORTB
+#define MOSI_DDR  DDRB
+
+#define SS      PB4
+#define SS_PORT PORTB
+#define SS_DDR  DDRB
+
+#elif defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560P__) // Arduino Mega1280
+
+#define SCK      PB1
+#define SCK_PORT PORTB
+#define SCK_DDR  DDRB
+
+#define MOSI      PB2
+#define MOSI_PORT PORTB
+#define MOSI_DDR  DDRB
+
+#define SS      PB0
+#define SS_PORT PORTB
+#define SS_DDR  DDRB
+
+#elif defined(__AVR_ATmega48__)    || \
+      defined(__AVR_ATmega88__)      || \
+      defined(__AVR_ATmega88P__)     || \
+      defined(__AVR_ATmega168__)     || \
+      defined(__AVR_ATmega168P__)    || \
+      defined(__AVR_ATmega328P__)    // Arduino 28 pins
+
+#define SCK      PB5
+#define SCK_PORT PORTB
+#define SCK_DDR  DDRB
+
+#define MOSI      PB3
+#define MOSI_PORT PORTB
+#define MOSI_DDR  DDRB
+
+#define SS      PB2
+#define SS_PORT PORTB
+#define SS_DDR  DDRB
+
+#endif // pinout SETTINGS
+
+#define LSBFIRST 0
+#define MSBFIRST 1
+
+#define SPI_CLOCK_DIV4 0x00
+#define SPI_CLOCK_DIV16 0x01
+#define SPI_CLOCK_DIV64 0x02
+#define SPI_CLOCK_DIV128 0x03
+#define SPI_CLOCK_DIV2 0x04
+#define SPI_CLOCK_DIV8 0x05
+#define SPI_CLOCK_DIV32 0x06
+//#define SPI_CLOCK_DIV64 0x07
+
+#define SPI_MODE0 0x00
+#define SPI_MODE1 0x04
+#define SPI_MODE2 0x08
+#define SPI_MODE3 0x0C
+
+#define SPI_MODE_MASK 0x0C  // CPOL = bit 3, CPHA = bit 2 on SPCR
+#define SPI_CLOCK_MASK 0x03  // SPR1 = bit 1, SPR0 = bit 0 on SPCR
+#define SPI_2XCLOCK_MASK 0x01  // SPI2X = bit 0 on SPSR
+
+void SPI_master_setBitOrder(uint8_t bitOrder);
+void SPI_master_setDataMode(uint8_t mode);
+void SPI_master_setClockDivider(uint8_t rate);
+void SPI_master_stop(void);
+
+// Dharmani settings
 // Master mode, MSB first, SCK phase low, SCK idle low, Low speed (fosc/64)
 // SPCR register:
 // | SPIE | SPE | DORD | MSTR | CPOL | CPHA | SPR1 | SPR0 |
@@ -411,11 +567,12 @@ void TWI_stop(void);
 // | SPIE | SPE | DORD | MSTR | CPOL | CPHA | SPR1 | SPR0 |
 // |  0   |  1  |  0   |  1   |  0   |  0   |  0   |  0   | = 0x50
 #define SPI_HIGH_SPEED       SPCR = 0x50; SPSR |= (1<<SPI2X)
-#endif //ISPPROG
+
 void SPI_master_init(void);
 uint8_t SPI_master_transmit(uint8_t);
 uint8_t SPI_master_receive(void);
 uint8_t SPI_master_transaction(uint8_t a, uint8_t b, uint8_t c, uint8_t d);
+
 #endif // ENABLE_SPI
 #ifdef ENABLE_SD_CARD
 //SD commands, many of these are not used ...

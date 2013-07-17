@@ -50,7 +50,7 @@
 #include <util/delay.h>
 #include <stdarg.h>
 #include <stdlib.h>
-#include <atmegaclib2.h>
+#include "atmegaclib2.h"
 #ifdef ENABLE_IR
 #include "irkeys.h"
 #endif
@@ -482,142 +482,116 @@ void serial_puthexU32(uint32_t value) {
 #endif
 
 #ifdef ENABLE_SPI
-//SPI initialize for SD card
-//clock rate: 125Khz (fosc/64)
-// OR do it for ISPProgrammer
-void SPI_master_init(void) {
-#ifdef ENABLE_ISPPROG
-#if defined(__AVR_ATmega16__)    || \
-    defined(__AVR_ATmega164P__)    || \
-    defined(__AVR_ATmega32__)      || \
-    defined(__AVR_ATmega324P__)    || \
-    defined(__AVR_ATmega324PA__)   || \
-    defined(__AVR_ATmega644__)     || \
-    defined(__AVR_ATmega644P__)    || \
-    defined(__AVR_ATmega1284P__)
-	//pin direction
-	sbi(DDRB, PB7);
-	// SCK
-	sbi(DDRB, PB5);
-	// MOSI
-	sbi(DDRB, PB4);
-	// SS, all three are OUTPUTS
-	//initialization
-	cbi(PORTB, PB7);
-	// SCK  LOW
-	cbi(PORTB, PB5);
-	// MOSI LOW
-	sbi(PORTB, PB4);
-	// SS   HIGH
-#elif defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560P__) // Arduino Mega1280
-	sbi(DDRB, PB1);// SCK
-	sbi(DDRB, PB2);// MOSI
-	sbi(DDRB, PB0);// SS, all three are OUTPUTS
-	//initialization
-	cbi(PORTB, PB1);// SCK  LOW
-	cbi(PORTB, PB2);// MOSI LOW
-	sbi(PORTB, PB0);// SS   HIGH
-#elif defined(__AVR_ATmega48__)    || \
-      defined(__AVR_ATmega88__)      || \
-      defined(__AVR_ATmega88P__)     || \
-      defined(__AVR_ATmega168__)     || \
-      defined(__AVR_ATmega168P__)    || \
-      defined(__AVR_ATmega328P__)    // Arduino 28 pins
-	sbi(DDRB, PB5);// SCK
-	sbi(DDRB, PB3);// MOSI
-	sbi(DDRB, PB2);// SS, all three are OUTPUTS
-	//initialization
-	cbi(PORTB, PB5);// SCK  LOW
-	cbi(PORTB, PB3);// MOSI LOW
-	sbi(PORTB, PB2);// SS   HIGH
-#endif
-	SPI_ISP
-	;
-#else
-	//set the spi pins directions
-	// the MISO pin is set already by default in master mode
-#if defined(__AVR_ATmega16__)    || \
-    defined(__AVR_ATmega164P__)    || \
-    defined(__AVR_ATmega32__)      || \
-    defined(__AVR_ATmega324P__)    || \
-    defined(__AVR_ATmega324PA__)   || \
-    defined(__AVR_ATmega644__)     || \
-    defined(__AVR_ATmega644P__)    || \
-    defined(__AVR_ATmega1284P__)
-	//pin direction
-	sbi(DDRB, PB7);
-	// SCK
-	sbi(DDRB, PB5);
-	// MOSI
-	sbi(DDRB, PB4);
-	// SS, all three are OUTPUTS
-	//initialization
-	cbi(PORTB, PB7);
-	// SCK  LOW
-	cbi(PORTB, PB5);
-	// MOSI LOW
-	sbi(PORTB, PB4);
-	// SS   HIGH
-#elif defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560P__) // Arduino Mega1280
-	sbi(DDRB, PB1);// SCK
-	sbi(DDRB, PB2);// MOSI
-	sbi(DDRB, PB0);// SS, all three are OUTPUTS
-	//initialization
-	cbi(PORTB, PB1);// SCK  LOW
-	cbi(PORTB, PB2);// MOSI LOW
-	sbi(PORTB, PB0);// SS   HIGH
-#elif defined(__AVR_ATmega48__)    || \
-      defined(__AVR_ATmega88__)      || \
-      defined(__AVR_ATmega88P__)     || \
-      defined(__AVR_ATmega168__)     || \
-      defined(__AVR_ATmega168P__)    || \
-      defined(__AVR_ATmega328P__)    // Arduino 28 pins
-	sbi(DDRB, PB5);// SCK
-	sbi(DDRB, PB3);// MOSI
-	sbi(DDRB, PB2);// SS, all three are OUTPUTS
-	//initialization
-	cbi(PORTB, PB5);// SCK  LOW
-	cbi(PORTB, PB3);// MOSI LOW
-	sbi(PORTB, PB2);// SS   HIGH
+
+#ifdef ENABLE_SPI_INT
+
+ISR(SPI_STC_vect){
+	SPI_TC = TRUE;
+}
 #endif
 
-	// I'm not happy with this, is not transparent to the user...
-	// anyway, see atmegaclib.h but settings are as follows:
-	// Master mode, MSB first, SCK phase low, SCK idle low, Low speed (fosc/64)
-	SPI_LOW_SPEED;
-#endif //ISPPROG
+void SPI_master_init(void) {
+	// Set SS to high so a connected chip will be "deselected" by default
+	sbi(SS_PORT, SS);
+
+	// When the SS pin is set as OUTPUT, it can be used as
+	// a general purpose output port (it doesn't influence
+	// SPI operations).
+	sbi(SS_DDR, SS);
+
+#ifdef ENABLE_SPI_INT
+	SPI_TC = FALSE;
+#endif
+	// Warning: if the SS pin ever becomes a LOW INPUT then SPI
+	// automatically switches to Slave, so the data direction of
+	// the SS pin MUST be kept as OUTPUT.
+	SPCR |= _BV(MSTR);
+	SPCR |= _BV(SPE);
+
+	// Set direction register for SCK and MOSI pin.
+	// MISO pin automatically overrides to INPUT.
+	// By doing this AFTER enabling SPI, we avoid accidentally
+	// clocking in a single bit since the lines go directly
+	// from "input" to SPI control.
+	// http://code.google.com/p/arduino/issues/detail?id=888
+	sbi(SCK_DDR, SCK);
+	sbi(MOSI_DDR, MOSI);
+}
+
+void SPI_master_setBitOrder(uint8_t bitOrder) {
+	if (bitOrder == LSBFIRST) {
+		SPCR |= _BV(DORD);
+	} else {
+		SPCR &= ~(_BV(DORD));
+	}
+}
+
+void SPI_master_setDataMode(uint8_t mode){
+	SPCR = (SPCR & ~SPI_MODE_MASK) | mode;
+}
+
+void SPI_master_setClockDivider(uint8_t rate){
+	SPCR = (SPCR & ~SPI_CLOCK_MASK) | (rate & SPI_CLOCK_MASK);
+	SPSR = (SPSR & ~SPI_2XCLOCK_MASK) | ((rate >> 2) & SPI_2XCLOCK_MASK);
+}
+
+void SPI_attachInterrupt(void) {
+	SPCR |= _BV(SPIE);
+}
+
+void SPI_detachInterrupt(void) {
+	SPCR &= ~_BV(SPIE);
+}
+
+void SPI_master_stop(void) {
+	SPCR &= ~_BV(SPE);
 }
 
 uint8_t SPI_master_transmit(uint8_t data) {
+	uint8_t reply;
 	// Start transmission
 	SPDR = data;
-
 	// Wait for transmission complete
+#ifdef ENABLE_SPI_INT
+	while(!SPI_TC)
+		;
+#else
 	while (!(SPSR & (1 << SPIF)))
 		;
-	data = SPDR;
-
-	return (data);
+#endif
+#ifdef ENABLE_SPI_INT
+	SPI_TC = FALSE;
+#endif
+	reply = SPDR;
+	return reply;
 }
 
-uint8_t SPI_master_receive(void) {
+uint8_t SPI_master_receive(void){
 	uint8_t data;
-	// Wait for reception complete
-
-	SPDR = 0xff;
+	// Start reception
+	SPDR = 0xFF;
+	// Wait for transmission complete
+#ifdef ENABLE_SPI_INT
+	while(!SPI_TC)
+		;
+#else
 	while (!(SPSR & (1 << SPIF)))
 		;
+#endif
+#ifdef ENABLE_SPI_INT
+	SPI_TC = FALSE;
+#endif
 	data = SPDR;
-
-	// Return data register
 	return data;
 }
 
-//the following is required by ArduinoISP programmer
+
+//the following function is required by (Arduino/ATmega)ISP programmer
+
 uint8_t SPI_master_transaction(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
 	uint8_t n;
 	//int8_t error;
-	n = 0;
+	//n = 0;
 	SPI_master_transmit(a);
 	n = SPI_master_transmit(b);
 	//if (n != a) error = -1;
