@@ -55,10 +55,10 @@
 // *****************************************************************************
 #define UART_BAUD_RATE			19200 // default is 57600
 #define UART_BAUD_SELECT		(F_CPU / (UART_BAUD_RATE * 16L) - 1)
-//#define ENABLE_SERIAL // Interrupt based, require CONVERSION, conflicts with SERIAL_POLL
-#define ENABLE_SERIAL_POLL // require CONVERSION, conflicts with SERIAL
+#define ENABLE_SERIAL // Interrupt based, require CONVERSION, conflicts with SERIAL_POLL
+//#define ENABLE_SERIAL_POLL // require CONVERSION, conflicts with SERIAL
 //#define ENABLE_PWMSERVO    // servo control (conflicts with regular pwm)
-//#define ENABLE_PWM         // motor or led control (conflicts with pwmservo)
+#define ENABLE_PWM         // motor or led control (conflicts with pwmservo)
 //#define ENABLE_IR          // infrared receiver, SONY protocol- it use TIMER0
 //#define IR_DEBOUNCE        // uncomment to debounce IR with a delay
 //#define ENABLE_ADC         // analog to digital converter
@@ -71,12 +71,12 @@
 //#define ENABLE_NB_DELAYS // Non-blocking, slotted delays (instead of millis()) using Timer0
 //#define ENABLE_LCD         // require CONVERSION
 //#define ENABLE_7SEG        // starting from one digit, up to eight digits.
-//#define ENABLE_ISPPROG     // Use Arduino as ISP Programmer - require SPI, conflict SD_Card
+#define ENABLE_ISPPROG     // Use Arduino as ISP Programmer - require SPI, conflict SD_Card
 #define ENABLE_SPI         // hardware SPI (master)
 //#define ENABLE_SPI_INT     // hardware SPI use Interrupts
 //#define ENABLE_SD_CARD_DEBUG // SD_ and F32_ functions send info on serial console
-#define ENABLE_SD_CARD       // raw SD Card operations; require SPI
-#define ENABLE_FAT32         // require PCF8583, SPI and SD_CARD
+//#define ENABLE_SD_CARD       // raw SD Card operations; require SPI
+//#define ENABLE_FAT32         // require PCF8583, SPI and SD_CARD
 //#define OPTIMIZE_SPEED
 // *****************************************************************************
 // End block of "enable/disable" features
