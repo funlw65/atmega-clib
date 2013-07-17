@@ -81,7 +81,29 @@
  */
 
 //Enable the following definitions on "atmegaclib2.h" header:
-//#define ...
+/*
+#define UART_BAUD_RATE			19200 // default is 57600
+#define UART_BAUD_SELECT		(F_CPU / (UART_BAUD_RATE * 16L) - 1)
+#define ENABLE_SERIAL // Interrupt based, require CONVERSION, conflicts with SERIAL_POLL
+#define ENABLE_PWM         // motor or led control (conflicts with pwmservo)
+#define ENABLE_CONVERSION    // useful for Serial, LCD and 7SEG Display
+#define ENABLE_ISPPROG     // Use Arduino as ISP Programmer - require SPI, conflict SD_Card
+#define ENABLE_SPI         // hardware SPI (master)
+*/
+
+//scroll down the header file to "#ifdef ENABLE_ISPPROG" line and
+// change the definitions for LED_ERR and LED_PMODE according to
+// your intended hardware but don't touch the LED_HB, as it needs
+// to be on the channel 1 of pwm (as defined by Arduino library)
+// - it is already configured for the selected microcontroller.
+
+// The program use all 4 SPI pins (including SS), already configured for
+// the selected microcontroller. You must connect the SS pin of the
+// programmer to the reset pin of the target microcontroller.
+
+// HAVE FUN!
+
+
 #ifndef F_CPU
 #define F_CPU 16000000U // required by Atmel Studio 6
 #endif
