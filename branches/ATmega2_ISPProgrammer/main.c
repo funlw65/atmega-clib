@@ -127,7 +127,7 @@
 #define STK_INSYNC  0x14
 #define STK_NOSYNC  0x15
 #define CRC_EOP     0x20 //OK, it is a space...
-void pulse(int port, int pin, int times);
+void LEDpulse(int port, int pin, int times);
 
 int error = 0;
 int pmode = 0;
@@ -181,7 +181,7 @@ void fill(int n) {
 }
 
 #define PTIME 30
-void pulse(int port, int pin, int times) {
+void LEDpulse(int port, int pin, int times) {
 	do {
 		//digitalWrite(pin, HIGH);
 		sbi(port, pin);
@@ -270,8 +270,8 @@ void start_pmode() {
 	SPCR = 0x13; //don't touch :P - I can explain if needed :))
 	SPI_master_init();
 	_delay_ms(50);
-	cbi(SS_PORT, SS);
 	// select slave
+	cbi(SS_PORT, SS);
 	SPI_master_transaction(0xAC, 0x53, 0x00, 0x00);
 	pmode = 1;
 }
@@ -470,6 +470,7 @@ void read_signature() {
 	serial_putchar(low);
 	serial_putchar(STK_OK);
 }
+
 ////////////////////////////////////
 ////////////////////////////////////
 //            M A I N
@@ -487,13 +488,13 @@ int main(void) {
 	pwm_init(1); // required by HeartBeat LED
 	//pinMode(LED_PMODE, OUTPUT);
 	sbi(LED_PMODE_DDR, LED_PMODE);
-	pulse(LED_PMODE_PORT, LED_PMODE, 2);
+	LEDpulse(LED_PMODE_PORT, LED_PMODE, 2);
 	//pinMode(LED_ERR, OUTPUT);
 	sbi(LED_ERR_DDR, LED_ERR);
-	pulse(LED_ERR_PORT, LED_ERR, 2);
+	LEDpulse(LED_ERR_PORT, LED_ERR, 2);
 	//pinMode(LED_HB, OUTPUT);
 	sbi(LED_HB_DDR, LED_HB);
-	pulse(LED_HB_PORT, LED_HB, 2);
+	LEDpulse(LED_HB_PORT, LED_HB, 2);
 	for (;;) {
 		// is pmode active?
 		if (pmode)
