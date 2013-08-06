@@ -4,7 +4,7 @@
  *                board, but also Arduino, Sanguino, ...
  *  Portions Copyright:
  *  - (c) 1998 Wouter van Ooijen, http://www.voti.nl/winkel/index.html
- *  - (c) 2004 Robert Krysztof, website is gone
+ *  - (c) 2004 Robert Krysztof, website's gone
  *  - (c) 2009 Michael Spiceland, https://code.google.com/p/libarduino/
  *  - (c) 2009 Joep Suijs, http://www.blogger.com/profile/06821529393453332522
  *  - (c) 2009 Vasile Surducan, http://vsurducan.blogspot.com/
@@ -14,6 +14,7 @@
  *  - (c) 2011 Joe Pardue, http://code.google.com/p/avrtoolbox/
  *  - (c) 2011 Martin Thomas, http://www.siwawi.arubi.uni-kl.de/avr-projects/
  *  - (c) 2012 Vasile Guta Ciucur, https://sites.google.com/site/funlw65/
+ *  - (c) xxxx Fabian Maximilian Thiele, website's gone
  *
  *******************************************************************************
  *  Redistribution and use in source and binary forms, with or without
@@ -47,18 +48,19 @@
 #define ATMEGACLIB_H
 #include <inttypes.h>
 #include <stdio.h>
+#include <avr/pgmspace.h>
 
 // ============== USER ZONE --- DO WHATEVER SETTINGS YOU NEED ==================
 
 // *****************************************************************************
 // Enabling/disabling additional functionality
 // *****************************************************************************
-#define UART_BAUD_RATE			19200 // default is 57600
-#define UART_BAUD_SELECT		(F_CPU / (UART_BAUD_RATE * 16L) - 1)
-#define ENABLE_SERIAL // Interrupt based, require CONVERSION, conflicts with SERIAL_POLL
-//#define ENABLE_SERIAL_POLL // require CONVERSION, conflicts with SERIAL
+#define UART_BAUD_RATE     19200 // default is 57600
+#define UART_BAUD_SELECT   (F_CPU / (UART_BAUD_RATE * 16L) - 1) //- don't touch
+//#define ENABLE_SERIAL // Interrupt based, require CONVERSION, conflicts with SERIAL_POLL
+#define ENABLE_SERIAL_POLL // require CONVERSION, conflicts with SERIAL
 //#define ENABLE_PWMSERVO    // servo control (conflicts with regular pwm)
-#define ENABLE_PWM         // motor or led control (conflicts with pwmservo)
+//#define ENABLE_PWM         // motor or led control (conflicts with pwmservo)
 //#define ENABLE_IR          // infrared receiver, SONY protocol- it use TIMER0
 //#define IR_DEBOUNCE        // uncomment to debounce IR with a delay
 //#define ENABLE_ADC         // analog to digital converter
@@ -70,9 +72,10 @@
 //#define ENABLE_DS18_2_ // Dallas temperature sensors, require ONE_WIRE
 //#define ENABLE_NB_DELAYS // Non-blocking, slotted delays (instead of millis()) using Timer0
 //#define ENABLE_LCD         // require CONVERSION
+#define ENABLE_GLCD
 //#define ENABLE_7SEG        // starting from one digit, up to eight digits.
-#define ENABLE_ISPPROG     // Use Arduino as ISP Programmer - require SPI, conflict SD_Card
-#define ENABLE_SPI         // hardware SPI (master)
+//#define ENABLE_ISPPROG     // Use Arduino as ISP Programmer - require SPI, conflict SD_Card
+//#define ENABLE_SPI         // hardware SPI (master)
 //#define ENABLE_SPI_INT     // hardware SPI use Interrupts
 //#define ENABLE_SD_CARD_DEBUG // SD_ and F32_ functions send info on serial console
 //#define ENABLE_SD_CARD       // raw SD Card operations; require SPI
@@ -286,6 +289,71 @@ int16_t isr_countdowns[DELAY_SLOTS];
 //#define LCD_4X16
 //#define LCD_4X20
 #endif //ENABLE_LCD
+
+#ifdef ENABLE_GLCD
+// define which ports are allocated for your graphic LCD
+// You need two full ports for this!
+
+// Included some changes for future additions, as separate settings for
+// individual pins but don't touch that yet!!!
+#define GLCD_CMD_PORT   PORTA		// Command Output Register
+// here goes the settings for every pin if maximum flexibility is desired
+// #define GLCD_CMD_PORT_D_I
+// #define GLCD_CMD_PORT_RW
+// #define GLCD_CMD_PORT_EN
+// #define GLCD_CMD_PORT_CSEL1
+// #define GLCD_CMD_PORT_CSEL2
+
+#define GLCD_CMD_DIR    DDRA		// Data Direction Register for Command Port
+// here goes the settings for every pin if maximum flexibility is desired
+// #define GLCD_CMD_DIR_D_I
+// #define GLCD_CMD_DIR_RW
+// #define GLCD_CMD_DIR_EN
+// #define GLCD_CMD_DIR_CSEL1
+// #define GLCD_CMD_DIR_CSEL2
+
+#define GLCD_DATA_IN    PINC		// Data Input Register
+// here goes the settings for every pin if maximum flexibility is desired
+// #define GLCD_DATA_IN_0
+// #define GLCD_DATA_IN_1
+// #define GLCD_DATA_IN_2
+// #define GLCD_DATA_IN_3
+// #define GLCD_DATA_IN_4
+// #define GLCD_DATA_IN_5
+// #define GLCD_DATA_IN_6
+// #define GLCD_DATA_IN_7
+
+#define GLCD_DATA_OUT   PORTC		// Data Output Register
+// here goes the settings for every pin if maximum flexibility is desired
+// #define GLCD_DATA_OUT_0
+// #define GLCD_DATA_OUT_1
+// #define GLCD_DATA_OUT_2
+// #define GLCD_DATA_OUT_3
+// #define GLCD_DATA_OUT_4
+// #define GLCD_DATA_OUT_5
+// #define GLCD_DATA_OUT_6
+// #define GLCD_DATA_OUT_7
+
+#define GLCD_DATA_DIR   DDRC		// Data Direction Register for Data Port
+// here goes the settings for every pin if maximum flexibility is desired
+// #define GLCD_DATA_DIR_0
+// #define GLCD_DATA_DIR_1
+// #define GLCD_DATA_DIR_2
+// #define GLCD_DATA_DIR_3
+// #define GLCD_DATA_DIR_4
+// #define GLCD_DATA_DIR_5
+// #define GLCD_DATA_DIR_6
+// #define GLCD_DATA_DIR_7
+
+// Command Port Bits
+#define GLCD_D_I        0x00		// D/I Bit Number
+#define GLCD_R_W        0x01		// R/W Bit Number
+#define GLCD_EN         0x02		// EN Bit Number
+#define GLCD_CSEL1      0x03		// CS1 Bit Number
+#define GLCD_CSEL2      0x04		// CS2 Bit Number
+
+#endif //ENABLE_GLCD
+
 #ifdef ENABLE_7SEG
 // Define delay in microseconds between digits selection to avoid ghost effect
 #define SEG_DELAY 1500
@@ -386,14 +454,17 @@ uint8_t SEG_DIGITS_BUFFER[4];
 // - set to 0xA2 if pin A0 of PCF8583 is connected to VCC
 #endif
 
-// ============ END USER ZONE --- NO EDITING ALLOWED! ==========================
-// =============================================================================
-// =============================================================================
+// ============ END USER ZONE --- NO EDITING ALLOWED!       ====================
+// = ------------------------------------------------------------------------- =
+// ============ DON'T MAKE MODIFICATIONS BELLOW THIS BORDER ====================
 
 #define FALSE 0
 #define TRUE  1
 #define HIGH  1
 #define LOW   0
+#define OFF   0
+#define ON    1
+
 
 // stolen from and-tech.pl in attempt to use some of their functions
 #define cbi(PORT, BIT) (_SFR_BYTE(PORT) &= ~_BV(BIT))// clear bit
@@ -940,11 +1011,8 @@ void serial_puthexU16(uint16_t value); // display a word in hex value
 void serial_puthexU32(uint32_t value); // display a double in hex value
 
 #define TX_NEWLINE {serial_putc(0x0d); serial_putc(0x0a);}
-// required by Dharmani's SD_Card functions... not sure, here would be nice to
-// have setting for Linux and Mac, as now is only  for Windows termination line...
-// Anyway, I think is ok, as long as is about a FAT32 file system.
-
-#endif
+// required by Dharmani's SD_Card functions...
+#endif // ENABLE_SERIAL_POLL
 
 #ifdef ENABLE_IR
 #define IR_BUFFER_SIZE		16
@@ -971,6 +1039,7 @@ void pwm_set(uint8_t pwmnum, uint8_t pwmval); /* pwmval 0-255 */
 #endif
 
 #ifdef ENABLE_ADC
+// this is NOT user zone
 //define adc voltage reference
 #define VREF_OFF_INT_AREF       0
 #define VREF_AVCC_CAP_AREF      1
@@ -991,6 +1060,7 @@ uint16_t adc_get(uint8_t adcnum);
 void adc_poweroff_digital_pinbuffer(uint8_t adcnum);
 #endif //adc
 #ifdef ENABLE_LCD
+// this is NOT user zone
 #ifdef LCD_1X8
 #define LCD_COLUMN      8
 #define LCD_LINE        1
@@ -1166,14 +1236,98 @@ uint8_t _displaycontrol;
 uint8_t _displaymode;
 
 #endif //ENABLE_LCD
+
+#ifdef ENABLE_GLCD
+// this is NOT user zone
+#if defined(__AVR_ATmega48__)    || \
+	    defined(__AVR_ATmega88__)      || \
+	    defined(__AVR_ATmega88P__)     || \
+	    defined(__AVR_ATmega168__)     || \
+	    defined(__AVR_ATmega168P__)    || \
+	    defined(__AVR_ATmega328P__)
+#error "You need a micro with at least 40 pins or two free full ports"
+#endif
+
+// Chips
+#define GLCD_CHIP1            0x00
+#define GLCD_CHIP2            0x01
+
+// Commands
+#define GLCD_ON               0x3F
+#define GLCD_OFF              0x3E
+#define GLCD_SET_ADD          0x40
+#define GLCD_SET_PAGE         0xB8
+#define GLCD_DISP_START       0xC0
+
+// Colors
+#define GLCD_BLACK            0xFF
+#define GLCD_WHITE            0x00
+
+// Font Indices
+#define GLCD_FONT_LENGTH         0
+#define GLCD_FONT_FIXED_WIDTH    2
+#define GLCD_FONT_HEIGHT         3
+#define GLCD_FONT_FIRST_CHAR     4
+#define GLCD_FONT_CHAR_COUNT     5
+#define GLCD_FONT_WIDTH_TABLE    6
+
+// Uncomment for slow drawing
+// #define DEBUG
+
+typedef struct {
+	uint8_t x;
+	uint8_t y;
+	uint8_t page;
+} glcdCoord;
+
+typedef uint8_t (*ks0108FontCallback)(const uint8_t*);
+
+//
+// Function Prototypes
+//
+
+// Graphic Functions
+void GLCD_DrawLine(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2, uint8_t color);
+void GLCD_DrawRect(uint8_t x, uint8_t y, uint8_t width, uint8_t height, uint8_t color);
+void GLCD_DrawRoundRect(uint8_t x, uint8_t y, uint8_t width, uint8_t height, uint8_t radius, uint8_t color);
+void GLCD_FillRect(uint8_t x, uint8_t y, uint8_t width, uint8_t height, uint8_t color);
+void GLCD_InvertRect(uint8_t x, uint8_t y, uint8_t width, uint8_t height);
+void GLCD_SetInverted(uint8_t invert);
+void GLCD_SetDot(uint8_t x, uint8_t y, uint8_t color);
+
+#define GLCD_DrawVertLine(x, y, length, color) {GLCD_FillRect(x, y, 0, length, color);}
+#define GLCD_DrawHoriLine(x, y, length, color) {GLCD_FillRect(x, y, length, 0, color);}
+#define GLCD_DrawCircle(xCenter, yCenter, radius, color) {GLCD_DrawRoundRect(xCenter-radius, yCenter-radius, 2*radius, 2*radius, radius, color);}
+#define GLCD_ClearScreen() {GLCD_FillRect(0, 0, 127, 63, GLCD_WHITE);}
+
+// Font Functions
+uint8_t GLCD_ReadFontData(const uint8_t* ptr);		//Standard Read Callback
+void    GLCD_SelectFont(const uint8_t* font, ks0108FontCallback callback, uint8_t color);
+int     GLCD_PutChar(char c);
+void    GLCD_Puts(char* str);
+void    GLCD_Puts_P(PGM_P str);
+uint8_t GLCD_CharWidth(char c);
+uint16_t GLCD_StringWidth(char* str);
+uint16_t GLCD_StringWidth_P(PGM_P str);
+
+// Control Functions
+void GLCD_GotoXY(uint8_t x, uint8_t y);
+void GLCD_Init(uint8_t invert);
+inline uint8_t GLCD_ReadData(void);
+void GLCD_WriteCommand(uint8_t cmd, uint8_t chip);
+void GLCD_WriteData(uint8_t data);
+
+#endif //ENABLE_GLCD
+
 #ifdef ENABLE_7SEG
+// this is NOT user zone
 typedef enum mydigit {
-	SELECT_DIGIT_ONE = 1,
-	SELECT_DIGIT_TWO = 2,
+	SELECT_DIGIT_ONE   = 1,
+	SELECT_DIGIT_TWO   = 2,
 	SELECT_DIGIT_THREE = 4,
-	SELECT_DIGIT_FOUR = 8,
-	SELECT_DIGIT_FIVE = 16,
-	SELECT_DIGIT_SIX = 32,
+	SELECT_DIGIT_FOUR  = 8,
+	SELECT_DIGIT_FIVE  = 16,
+	SELECT_DIGIT_SIX   = 32,
 	SELECT_DIGIT_SEVEN = 64,
 	SELECT_DIGIT_EIGHT = 128
 } MyDigit;
