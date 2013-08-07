@@ -55,10 +55,10 @@
 // *****************************************************************************
 // Enabling/disabling additional functionality
 // *****************************************************************************
-#define UART_BAUD_RATE     19200 // default is 57600
-#define UART_BAUD_SELECT   (F_CPU / (UART_BAUD_RATE * 16L) - 1) //- don't touch
+//#define UART_BAUD_RATE     19200 // default is 57600
+//#define UART_BAUD_SELECT   (F_CPU / (UART_BAUD_RATE * 16L) - 1) //- don't touch
 //#define ENABLE_SERIAL // Interrupt based, require CONVERSION, conflicts with SERIAL_POLL
-#define ENABLE_SERIAL_POLL // require CONVERSION, conflicts with SERIAL
+//#define ENABLE_SERIAL_POLL // require CONVERSION, conflicts with SERIAL
 //#define ENABLE_PWMSERVO    // servo control (conflicts with regular pwm)
 //#define ENABLE_PWM         // motor or led control (conflicts with pwmservo)
 //#define ENABLE_IR          // infrared receiver, SONY protocol- it use TIMER0
@@ -66,7 +66,7 @@
 //#define ENABLE_ADC         // analog to digital converter
 //#define ENABLE_TWI         // hardware I2C
 //#define ENABLE_I2C_SOFTWARE // software I2C
-#define ENABLE_CONVERSION    // useful for Serial, LCD and 7SEG Display
+//#define ENABLE_CONVERSION    // useful for Serial, LCD and 7SEG Display
 //#define ENABLE_PCF8583     // require CONVERSION and I2C/TWI
 //#define ENABLE_ONE_WIRE    // one wire protocol
 //#define ENABLE_DS18_2_ // Dallas temperature sensors, require ONE_WIRE
