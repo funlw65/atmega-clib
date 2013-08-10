@@ -13,6 +13,7 @@
  *  - (c) 2010 Chennai Dharmani, http://www.dharmanitech.com
  *  - (c) 2011 Joe Pardue, http://code.google.com/p/avrtoolbox/
  *  - (c) 2011 Martin Thomas, http://www.siwawi.arubi.uni-kl.de/avr-projects/
+ *  - (c) 2011 PJRC.COM, LLC - Paul Stoffregen, http://www.pjrc.com/
  *  - (c) 2012 Vasile Guta Ciucur, https://sites.google.com/site/funlw65/
  *  - (c) xxxx Fabian Maximilian Thiele, website's gone
  *
@@ -55,24 +56,26 @@
 // *****************************************************************************
 // Enabling/disabling additional functionality
 // *****************************************************************************
-//#define UART_BAUD_RATE     19200 // default is 57600
-//#define UART_BAUD_SELECT   (F_CPU / (UART_BAUD_RATE * 16L) - 1) //- don't touch
+#define UART_BAUD_RATE     57600 // default is 57600
+#define UART_BAUD_SELECT   (F_CPU / (UART_BAUD_RATE * 16L) - 1) //- don't touch
 //#define ENABLE_SERIAL // Interrupt based, require CONVERSION, conflicts with SERIAL_POLL
-//#define ENABLE_SERIAL_POLL // require CONVERSION, conflicts with SERIAL
+#define ENABLE_SERIAL_POLL // require CONVERSION, conflicts with SERIAL
 //#define ENABLE_PWMSERVO    // servo control (conflicts with regular pwm)
 //#define ENABLE_PWM         // motor or led control (conflicts with pwmservo)
 //#define ENABLE_IR          // infrared receiver, SONY protocol- it use TIMER0
+#define ENABLE_FREQMEASURE   // it can use one of TIMER1, TIMER3, TIMER4, TIMER5
 //#define IR_DEBOUNCE        // uncomment to debounce IR with a delay
 //#define ENABLE_ADC         // analog to digital converter
 //#define ENABLE_TWI         // hardware I2C
 //#define ENABLE_I2C_SOFTWARE // software I2C
-//#define ENABLE_CONVERSION    // useful for Serial, LCD and 7SEG Display
+#define ENABLE_CONVERSION    // useful for Serial, LCD and 7SEG Display
 //#define ENABLE_PCF8583     // require CONVERSION and I2C/TWI
 //#define ENABLE_ONE_WIRE    // one wire protocol
 //#define ENABLE_DS18_2_ // Dallas temperature sensors, require ONE_WIRE
 //#define ENABLE_NB_DELAYS // Non-blocking, slotted delays (instead of millis()) using Timer0
+//#define ENABLE_MILLIS     // use TIMER0, conflicts with NB_DELAYS
 //#define ENABLE_LCD         // require CONVERSION
-#define ENABLE_GLCD
+//#define ENABLE_GLCD
 //#define ENABLE_7SEG        // starting from one digit, up to eight digits.
 //#define ENABLE_ISPPROG     // Use Arduino as ISP Programmer - require SPI, conflict SD_Card
 //#define ENABLE_SPI         // hardware SPI (master)
@@ -104,7 +107,7 @@ int16_t isr_countdowns[DELAY_SLOTS];
     defined(__AVR_ATmega644__)     || \
     defined(__AVR_ATmega644P__)    || \
     defined(__AVR_ATmega1284P__)
-	//pinMode(LED_PMODE, OUTPUT);
+//pinMode(LED_PMODE, OUTPUT);
 #define LED_HB    PD5 // LED HEART BEAT
 #define LED_ERR   PC6 // LED ERROR
 #define LED_PMODE PC7 // LED PROGRAMMING MODE
@@ -159,7 +162,6 @@ int16_t isr_countdowns[DELAY_SLOTS];
 //--
 #endif
 #endif // ENABLE_ISPPROG
-
 // Continue with user settings, and chose your values...
 //------------------------
 // I2C port and pin selection - at your choice.
@@ -185,6 +187,50 @@ int16_t isr_countdowns[DELAY_SLOTS];
 // change it to your needs (16, 32, 64, 128)
 #endif
 
+// chose the timer if your microcontroller allows that.
+#ifdef ENABLE_FREQMEASURE
+// Arduino Uno, Duemilanove, LilyPad, Mini, Fio, etc
+#if defined(__AVR_ATmega48__)    || \
+	    defined(__AVR_ATmega88__)      || \
+	    defined(__AVR_ATmega88P__)     || \
+	    defined(__AVR_ATmega168__)     || \
+	    defined(__AVR_ATmega168P__)    || \
+	    defined(__AVR_ATmega328P__)
+#define CAPTURE_USE_TIMER1       // ICP1 is pin 8 (PB0)
+// Teensy 1.0
+#elif defined(__AVR_AT90USB162__)
+#define CAPTURE_USE_TIMER1       // ICP1 is pin 16
+// Teensy 2.0
+#elif defined(__AVR_ATmega32U4__)
+// #define CAPTURE_USE_TIMER1    // ICP1 is pin 22
+#define CAPTURE_USE_TIMER3       // ICP3 is pin 10
+// Teensy++ 1.0 & 2.0
+#elif defined(__AVR_AT90USB646__) || defined(__AVR_AT90USB1286__) || defined(__AVR_AT90USB1287__)
+// #define CAPTURE_USE_TIMER1    // ICP1 is pin 4
+#define CAPTURE_USE_TIMER3       // ICP3 is pin 17
+// Sanguino
+#elif defined(__AVR_ATmega16__)      || \
+	    defined(__AVR_ATmega164P__)    || \
+	    defined(__AVR_ATmega32__)      || \
+	    defined(__AVR_ATmega324P__)    || \
+	    defined(__AVR_ATmega324PA__)   || \
+	    defined(__AVR_ATmega644__)     || \
+	    defined(__AVR_ATmega644P__)    || \
+	    defined(__AVR_ATmega1284P__)
+#define CAPTURE_USE_TIMER1       // ICP1 is pin 14 (PD6)
+// Arduino Mega
+#elif defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
+// #define CAPTURE_USE_TIMER1    // ICP1 is not connected
+// #define CAPTURE_USE_TIMER3    // ICP3 is not connected
+#define CAPTURE_USE_TIMER4       // ICP4 is pin 49
+// #define CAPTURE_USE_TIMER5    // ICP5 is pin 48
+
+#else
+#error "Unknown chip, please edit me with timer+counter definitions"
+
+#endif
+#endif //ENABLE_FREQMEASURE
+//--
 #ifdef ENABLE_SD_CARD
 //define the pin used for CS (chip select) the SD Card
 //it can be the SPI SS pin if you want (recommended if SD is the first SPI peripheral)
@@ -195,6 +241,7 @@ int16_t isr_countdowns[DELAY_SLOTS];
 #define SD_CS_PORT PORTB
 #define SD_CS_PIN  PB4
 #endif //ENABLE_SD_CARD
+//--
 #ifdef ENABLE_FAT32
 #define MAX_STRING_SIZE     100 //defining the maximum size of the dataString
 #endif //ENABLE_FAT32
@@ -230,7 +277,6 @@ int16_t isr_countdowns[DELAY_SLOTS];
 //#define OW_RECOVERY_TIME        5  // usec
 //#define OW_RECOVERY_TIME       30 // usec
 #define OW_RECOVERY_TIME         10 // usec
-
 // Use AVR's internal pull-up resistor instead of external 4,7k resistor.
 // Based on information from Sascha Schade. Experimental but worked in tests
 // with one DS18B20 and one DS18S20 on a rather short bus (60cm), where both
@@ -289,7 +335,6 @@ int16_t isr_countdowns[DELAY_SLOTS];
 //#define LCD_4X16
 //#define LCD_4X20
 #endif //ENABLE_LCD
-
 #ifdef ENABLE_GLCD
 // define which ports are allocated for your graphic LCD
 // You need two full ports for this!
@@ -351,9 +396,7 @@ int16_t isr_countdowns[DELAY_SLOTS];
 #define GLCD_EN         0x02		// EN Bit Number
 #define GLCD_CSEL1      0x03		// CS1 Bit Number
 #define GLCD_CSEL2      0x04		// CS2 Bit Number
-
 #endif //ENABLE_GLCD
-
 #ifdef ENABLE_7SEG
 // Define delay in microseconds between digits selection to avoid ghost effect
 #define SEG_DELAY 1500
@@ -458,13 +501,14 @@ uint8_t SEG_DIGITS_BUFFER[4];
 // = ------------------------------------------------------------------------- =
 // ============ DON'T MAKE MODIFICATIONS BELLOW THIS BORDER ====================
 
-#define FALSE 0
-#define TRUE  1
-#define HIGH  1
-#define LOW   0
-#define OFF   0
-#define ON    1
-
+#define FALSE  0
+#define TRUE   1
+#define HIGH   1
+#define LOW    0
+#define OFF    0
+#define ON     1
+#define OUTPUT 1
+#define INPUT  0
 
 // stolen from and-tech.pl in attempt to use some of their functions
 #define cbi(PORT, BIT) (_SFR_BYTE(PORT) &= ~_BV(BIT))// clear bit
@@ -500,7 +544,18 @@ void onboard_led_on(void);
 void onboard_led_off(void);
 void onboard_led_toggle(void);
 
+#ifdef ENABLE_MILLIS
 #ifdef ENABLE_NB_DELAYS
+#error "Non blocking delays conflicts with millis"
+#endif
+void millis_init(void);
+uint32_t millis(void);
+#endif
+//--
+#ifdef ENABLE_NB_DELAYS
+#ifdef ENABLE_MILLIS
+#error "Millis conflicts with non blocking delays"
+#endif
 void timer0_isr_init(void);
 uint8_t check_delay(uint8_t slot);
 void set_delay(uint8_t slot, uint16_t ms_time);
@@ -539,7 +594,6 @@ void TWI_stop(void);
 
 #endif // ENABLE_TWI
 #ifdef ENABLE_SPI //In preparation of porting ArduinoISP sketch
-
 #ifdef ENABLE_SPI_INT
 volatile uint8_t SPI_TC;
 #endif
@@ -567,7 +621,6 @@ volatile uint8_t SPI_TC;
 #define SS_DDR  DDRB
 
 #elif defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560P__) // Arduino Mega1280
-
 #define SCK      PB1
 #define SCK_PORT PORTB
 #define SCK_DDR  DDRB
@@ -586,7 +639,6 @@ volatile uint8_t SPI_TC;
       defined(__AVR_ATmega168__)     || \
       defined(__AVR_ATmega168P__)    || \
       defined(__AVR_ATmega328P__)    // Arduino 28 pins
-
 #define SCK      PB5
 #define SCK_PORT PORTB
 #define SCK_DDR  DDRB
@@ -600,7 +652,6 @@ volatile uint8_t SPI_TC;
 #define SS_DDR  DDRB
 
 #endif // pinout SETTINGS
-
 #define LSBFIRST 0
 #define MSBFIRST 1
 
@@ -621,7 +672,6 @@ volatile uint8_t SPI_TC;
 #define SPI_MODE_MASK 0x0C  // CPOL = bit 3, CPHA = bit 2 on SPCR
 #define SPI_CLOCK_MASK 0x03  // SPR1 = bit 1, SPR0 = bit 0 on SPCR
 #define SPI_2XCLOCK_MASK 0x01  // SPI2X = bit 0 on SPSR
-
 void SPI_master_setBitOrder(uint8_t bitOrder);
 void SPI_master_setDataMode(uint8_t mode);
 void SPI_master_setClockDivider(uint8_t rate);
@@ -689,80 +739,80 @@ uint8_t SD_erase(uint32_t SD_startBlock, uint32_t SD_totalBlocks);
 //Structure to access Master Boot Record for getting info about partitions
 struct MBRinfo_Structure {
 	uint8_t nothing[446]; //ignore, placed here to fill the gap in the structure
-	uint8_t partitionData[64]; //partition records (16x4)
-	uint16_t signature; //0xaa55
+	uint8_t partitionData[64];//partition records (16x4)
+	uint16_t signature;//0xaa55
 };
 
 //Structure to access info of the first partition of the disk
 struct partitionInfo_Structure {
 	uint8_t status; //0x80 - active partition
-	uint8_t headStart; //starting head
-	uint16_t cylSectStart; //starting cylinder and sector
-	uint8_t type; //partition type
-	uint8_t headEnd; //ending head of the partition
-	uint16_t cylSectEnd; //ending cylinder and sector
-	uint32_t firstSector; //total sectors between MBR & the first sector of the partition
-	uint32_t sectorsTotal; //size of this partition in sectors
+	uint8_t headStart;//starting head
+	uint16_t cylSectStart;//starting cylinder and sector
+	uint8_t type;//partition type
+	uint8_t headEnd;//ending head of the partition
+	uint16_t cylSectEnd;//ending cylinder and sector
+	uint32_t firstSector;//total sectors between MBR & the first sector of the partition
+	uint32_t sectorsTotal;//size of this partition in sectors
 };
 
 //Structure to access boot sector data
 struct BS_Structure {
 	uint8_t jumpBoot[3]; //default: 0x009000EB
 	uint8_t OEMName[8];
-	uint16_t bytesPerSector; //default: 512
+	uint16_t bytesPerSector;//default: 512
 	uint8_t sectorPerCluster;
 	uint16_t reservedSectorCount;
 	uint8_t numberofFATs;
 	uint16_t rootEntryCount;
-	uint16_t totalSectors_F16; //must be 0 for FAT32
+	uint16_t totalSectors_F16;//must be 0 for FAT32
 	uint8_t mediaType;
-	uint16_t FATsize_F16; //must be 0 for FAT32
+	uint16_t FATsize_F16;//must be 0 for FAT32
 	uint16_t sectorsPerTrack;
 	uint16_t numberofHeads;
 	uint32_t hiddenSectors;
 	uint32_t totalSectors_F32;
-	uint32_t FATsize_F32; //count of sectors occupied by one FAT
+	uint32_t FATsize_F32;//count of sectors occupied by one FAT
 	uint16_t extFlags;
-	uint16_t FSversion; //0x0000 (defines version 0.0)
-	uint32_t rootCluster; //first cluster of root directory (=2)
-	uint16_t FSinfo; //sector number of FSinfo structure (=1)
+	uint16_t FSversion;//0x0000 (defines version 0.0)
+	uint32_t rootCluster;//first cluster of root directory (=2)
+	uint16_t FSinfo;//sector number of FSinfo structure (=1)
 	uint16_t BackupBootSector;
 	uint8_t reserved[12];
 	uint8_t driveNumber;
 	uint8_t reserved1;
 	uint8_t bootSignature;
 	uint32_t volumeID;
-	uint8_t volumeLabel[11]; //"NO NAME "
-	uint8_t fileSystemType[8]; //"FAT32"
+	uint8_t volumeLabel[11];//"NO NAME "
+	uint8_t fileSystemType[8];//"FAT32"
 	uint8_t bootData[420];
-	uint16_t bootEndSignature; //0xaa55
+	uint16_t bootEndSignature;//0xaa55
 };
 
 //Structure to access FSinfo sector data
 struct FSInfo_Structure {
 	uint32_t leadSignature; //0x41615252
 	uint8_t reserved1[480];
-	uint32_t structureSignature; //0x61417272
-	uint32_t freeClusterCount; //initial: 0xffffffff
-	uint32_t nextFreeCluster; //initial: 0xffffffff
+	uint32_t structureSignature;//0x61417272
+	uint32_t freeClusterCount;//initial: 0xffffffff
+	uint32_t nextFreeCluster;//initial: 0xffffffff
 	uint8_t reserved2[12];
-	uint32_t trailSignature; //0xaa550000
+	uint32_t trailSignature;//0xaa550000
 };
 
 //Structure to access Directory Entry in the FAT
 struct dir_Structure {
 	uint8_t name[11];
 	uint8_t attrib; //file attributes
-	uint8_t NTreserved; //always 0
-	uint8_t timeTenth; //tenths of seconds, set to 0 here
-	uint16_t createTime; //time file was created
-	uint16_t createDate; //date file was created
+	uint8_t NTreserved;//always 0
+	uint8_t timeTenth;//tenths of seconds, set to 0 here
+	uint16_t createTime;//time file was created
+	uint16_t createDate;//date file was created
 	uint16_t lastAccessDate;
-	uint16_t firstClusterHI; //higher word of the first cluster number
-	uint16_t writeTime; //time of last write
-	uint16_t writeDate; //date of last write
-	uint16_t firstClusterLO; //lower word of the first cluster number
-	uint32_t fileSize; //size of file in bytes
+	uint16_t firstClusterHI;//higher word of the first cluster number
+	uint16_t writeTime;//time of last write
+	uint16_t writeDate;//date of last write
+	uint16_t firstClusterLO;//lower word of the first cluster number
+	uint32_t fileSize;//size of file in bytes
 };
 
 //Attribute definitions for file/directory
@@ -796,7 +846,7 @@ struct dir_Structure {
 volatile uint32_t firstDataSector, rootCluster, totalClusters;
 volatile uint16_t bytesPerSector, sectorPerCluster, reservedSectorCount;
 uint32_t unusedSectors, appendFileSector, appendFileLocation, fileSize,
-		appendStartCluster;
+appendStartCluster;
 
 //global flag to keep track of free cluster count updating in FSinfo sector
 uint8_t freeClusterCountUpdated;
@@ -938,7 +988,6 @@ extern uint8_t DS18X20_read_decicelsius_single(uint8_t familycode,
 extern uint8_t DS18X20_format_from_decicelsius(int16_t decicelsius, int8_t s[],
 		uint8_t n);
 #endif // DS18X20_DECICELSIUS
-
 #if DS18X20_MAX_RESOLUTION
 // temperature unit for max. resolution is °C * 10e-4
 // examples: -250625 -> -25.0625°C, 1250000 -> 125.0000 °C
@@ -948,7 +997,6 @@ extern uint8_t DS18X20_read_maxres_single(uint8_t familycode,
 extern uint8_t DS18X20_format_from_maxres(int32_t temperaturevalue, char s[],
 		uint8_t n);
 #endif // DS18X20_MAX_RESOLUTION
-
 #if DS18X20_EEPROMSUPPORT
 // write th, tl and config-register to scratchpad (config ignored on DS18S20)
 uint8_t DS18X20_write_scratchpad(uint8_t id[], uint8_t th, uint8_t tl,
@@ -960,12 +1008,10 @@ uint8_t DS18X20_scratchpad_to_eeprom(uint8_t with_power_extern, uint8_t id[]);
 // copy values from DS18x20 eeprom into scratchpad
 uint8_t DS18X20_eeprom_to_scratchpad(uint8_t id[]);
 #endif // DS18X20_EEPROMSUPPORT
-
 #if DS18X20_VERBOSE
 extern void DS18X20_show_id_uart(uint8_t *id, size_t n);
 extern uint8_t DS18X20_read_meas_all_verbose(void);
 #endif // DS18X20_VERBOSE
-
 #endif // ENABLE_DS18_20_
 #endif // ENABLE_ONE_WIRE
 //--
@@ -1005,15 +1051,14 @@ void serial_putstr_f(int8_t *s); // send a string from Flash memory
 #define serial_puts_f(s__) serial_putstr_f((int8_t *)PSTR(s__))
 //void serial_putstr_e(uint8_t *s);   // send a string from EEPROM
 void serial_putint(int value);
-void serial_putU08(uint8_t value); // display a byte
-void serial_puthexU08(uint8_t value); // display a byte in hex value
-void serial_puthexU16(uint16_t value); // display a word in hex value
-void serial_puthexU32(uint32_t value); // display a double in hex value
+void serial_putU08(uint8_t value);// display a byte
+void serial_puthexU08(uint8_t value);// display a byte in hex value
+void serial_puthexU16(uint16_t value);// display a word in hex value
+void serial_puthexU32(uint32_t value);// display a double in hex value
 
 #define TX_NEWLINE {serial_putc(0x0d); serial_putc(0x0a);}
 // required by Dharmani's SD_Card functions...
 #endif // ENABLE_SERIAL_POLL
-
 #ifdef ENABLE_IR
 #define IR_BUFFER_SIZE		16
 void ir_init(void);
@@ -1038,6 +1083,192 @@ void pwm_init(uint8_t pwmnum);
 void pwm_set(uint8_t pwmnum, uint8_t pwmval); /* pwmval 0-255 */
 #endif
 
+#ifdef ENABLE_FREQMEASURE
+#if defined(CAPTURE_USE_TIMER1)
+
+static uint8_t saveTCCR1A, saveTCCR1B;
+
+static inline void capture_init(void) {
+	saveTCCR1A = TCCR1A;
+	saveTCCR1B = TCCR1B;
+	TCCR1B = 0;
+	TCCR1A = 0;
+	TCNT1 = 0;
+	TIFR1 = (1 << ICF1) | (1 << TOV1);
+	TIMSK1 = (1 << ICIE1) | (1 << TOIE1);
+}
+
+static inline void capture_start(void) {
+	TCCR1B = (1 << ICNC1) | (1 << ICES1) | (1 << CS10);
+}
+
+static inline uint16_t capture_read(void) {
+	return ICR1;
+}
+
+static inline uint8_t capture_overflow(void) {
+	return TIFR1 & (1 << TOV1);
+}
+
+static inline uint8_t capture_overflow_reset(void) {
+	return TIFR1 = (1 << TOV1);
+}
+
+static inline void capture_shutdown(void) {
+	TCCR1B = 0;
+	TIMSK1 = 0;
+	TCCR1A = saveTCCR1A;
+	TCCR1B = saveTCCR1B;
+}
+
+#define TIMER_OVERFLOW_VECTOR  TIMER1_OVF_vect
+#define TIMER_CAPTURE_VECTOR   TIMER1_CAPT_vect
+
+#elif defined(CAPTURE_USE_TIMER3)
+
+static uint8_t saveTCCR3A, saveTCCR3B;
+
+static inline void capture_init(void)
+{
+	saveTCCR3A = TCCR3A;
+	saveTCCR3B = TCCR3B;
+	TCCR3B = 0;
+	TCCR3A = 0;
+	TCNT3 = 0;
+	TIFR3 = (1<<ICF3) | (1<<TOV3);
+	TIMSK3 = (1<<ICIE3) | (1<<TOIE3);
+}
+
+static inline void capture_start(void)
+{
+	TCCR3B = (1<<ICNC3) | (1<<ICES3) | (1<<CS30);
+}
+
+static inline uint16_t capture_read(void)
+{
+	return ICR3;
+}
+
+static inline uint8_t capture_overflow(void)
+{
+	return TIFR3 & (1<<TOV3);
+}
+
+static inline uint8_t capture_overflow_reset(void)
+{
+	return TIFR3 = (1<<TOV3);
+}
+
+static inline void capture_shutdown(void)
+{
+	TCCR3B = 0;
+	TIMSK3 = 0;
+	TCCR3A = saveTCCR3A;
+	TCCR3B = saveTCCR3B;
+}
+
+#define TIMER_OVERFLOW_VECTOR  TIMER3_OVF_vect
+#define TIMER_CAPTURE_VECTOR   TIMER3_CAPT_vect
+
+#elif defined(CAPTURE_USE_TIMER4)
+
+static uint8_t saveTCCR4A, saveTCCR4B;
+
+static inline void capture_init(void)
+{
+	saveTCCR4A = TCCR4A;
+	saveTCCR4B = TCCR4B;
+	TCCR4B = 0;
+	TCCR4A = 0;
+	TCNT4 = 0;
+	TIFR4 = (1<<ICF4) | (1<<TOV4);
+	TIMSK4 = (1<<ICIE4) | (1<<TOIE4);
+}
+
+static inline void capture_start(void)
+{
+	TCCR4B = (1<<ICNC4) | (1<<ICES4) | (1<<CS40);
+}
+
+static inline uint16_t capture_read(void)
+{
+	return ICR4;
+}
+
+static inline uint8_t capture_overflow(void)
+{
+	return TIFR4 & (1<<TOV4);
+}
+
+static inline uint8_t capture_overflow_reset(void)
+{
+	return TIFR4 = (1<<TOV4);
+}
+
+static inline void capture_shutdown(void)
+{
+	TCCR4B = 0;
+	TIMSK4 = 0;
+	TCCR4A = saveTCCR4A;
+	TCCR4B = saveTCCR4B;
+}
+
+#define TIMER_OVERFLOW_VECTOR  TIMER4_OVF_vect
+#define TIMER_CAPTURE_VECTOR   TIMER4_CAPT_vect
+
+#elif defined(CAPTURE_USE_TIMER5)
+
+static uint8_t saveTCCR5A, saveTCCR5B;
+
+static inline void capture_init(void)
+{
+	saveTCCR5A = TCCR5A;
+	saveTCCR5B = TCCR5B;
+	TCCR5B = 0;
+	TCCR5A = 0;
+	TCNT5 = 0;
+	TIFR5 = (1<<ICF5) | (1<<TOV5);
+	TIMSK5 = (1<<ICIE5) | (1<<TOIE5);
+}
+
+static inline void capture_start(void)
+{
+	TCCR5B = (1<<ICNC5) | (1<<ICES5) | (1<<CS50);
+}
+
+static inline uint16_t capture_read(void)
+{
+	return ICR5;
+}
+
+static inline uint8_t capture_overflow(void)
+{
+	return TIFR5 & (1<<TOV5);
+}
+
+static inline uint8_t capture_overflow_reset(void)
+{
+	return TIFR5 = (1<<TOV5);
+}
+
+static inline void capture_shutdown(void)
+{
+	TCCR5B = 0;
+	TIMSK5 = 0;
+	TCCR5A = saveTCCR5A;
+	TCCR5B = saveTCCR5B;
+}
+
+#define TIMER_OVERFLOW_VECTOR  TIMER5_OVF_vect
+#define TIMER_CAPTURE_VECTOR   TIMER5_CAPT_vect
+#endif // CAPTURE_USE_***
+// Main functions
+void     FreqMeasure_begin(void);
+uint8_t  FreqMeasure_available(void);
+uint32_t FreqMeasure_read(void);
+void     FreqMeasure_end(void);
+
+#endif //ENABLE_FREQMEASURE
 #ifdef ENABLE_ADC
 // this is NOT user zone
 //define adc voltage reference
@@ -1176,9 +1407,9 @@ void lcd_putstr_f(int8_t *);
 #define lcd_puts_f(s__) lcd_putstr_f((int8_t *)PSTR(s__))
 void lcd_putint(int value);
 void lcd_putU08(uint8_t value); // display a byte
-void lcd_puthexU08(uint8_t value); // display a byte in hex value
-void lcd_puthexU16(uint16_t value); // display a word in hex value
-void lcd_blank(uint8_t len); // blank n digits
+void lcd_puthexU08(uint8_t value);// display a byte in hex value
+void lcd_puthexU16(uint16_t value);// display a word in hex value
+void lcd_blank(uint8_t len);// blank n digits
 void lcd_cursor_on(void);
 void lcd_cursor_off(void);
 void lcd_blink_on(void);
@@ -1236,7 +1467,6 @@ uint8_t _displaycontrol;
 uint8_t _displaymode;
 
 #endif //ENABLE_LCD
-
 #ifdef ENABLE_GLCD
 // this is NOT user zone
 #if defined(__AVR_ATmega48__)    || \
@@ -1278,7 +1508,7 @@ typedef struct {
 	uint8_t x;
 	uint8_t y;
 	uint8_t page;
-} glcdCoord;
+}glcdCoord;
 
 typedef uint8_t (*ks0108FontCallback)(const uint8_t*);
 
@@ -1301,11 +1531,11 @@ void GLCD_SetDot(uint8_t x, uint8_t y, uint8_t color);
 #define GLCD_ClearScreen() {GLCD_FillRect(0, 0, 127, 63, GLCD_WHITE);}
 
 // Font Functions
-uint8_t GLCD_ReadFontData(const uint8_t* ptr);		//Standard Read Callback
-void    GLCD_SelectFont(const uint8_t* font, ks0108FontCallback callback, uint8_t color);
-int     GLCD_PutChar(char c);
-void    GLCD_Puts(char* str);
-void    GLCD_Puts_P(PGM_P str);
+uint8_t GLCD_ReadFontData(const uint8_t* ptr);//Standard Read Callback
+void GLCD_SelectFont(const uint8_t* font, ks0108FontCallback callback, uint8_t color);
+int GLCD_PutChar(char c);
+void GLCD_Puts(char* str);
+void GLCD_Puts_P(PGM_P str);
 uint8_t GLCD_CharWidth(char c);
 uint16_t GLCD_StringWidth(char* str);
 uint16_t GLCD_StringWidth_P(PGM_P str);
@@ -1318,7 +1548,7 @@ void GLCD_WriteCommand(uint8_t cmd, uint8_t chip);
 void GLCD_WriteData(uint8_t data);
 
 #endif //ENABLE_GLCD
-
+//--
 #ifdef ENABLE_7SEG
 // this is NOT user zone
 typedef enum mydigit {
@@ -1330,7 +1560,7 @@ typedef enum mydigit {
 	SELECT_DIGIT_SIX   = 32,
 	SELECT_DIGIT_SEVEN = 64,
 	SELECT_DIGIT_EIGHT = 128
-} MyDigit;
+}MyDigit;
 
 void seg_init(void);
 uint8_t seg_digit_from_array(uint8_t index);
