@@ -65,10 +65,10 @@
 //#define ENABLE_IR          // infrared receiver, SONY protocol- it use TIMER0
 //#define ENABLE_FREQMEASURE   // it can use one of TIMER1, TIMER3, TIMER4, TIMER5, affects PWM
 //#define IR_DEBOUNCE        // uncomment to debounce IR with a delay
-#define ENABLE_ADC         // analog to digital converter
+//#define ENABLE_ADC         // analog to digital converter
 //#define ENABLE_TWI         // hardware I2C
 //#define ENABLE_I2C_SOFTWARE // software I2C
-#define ENABLE_CONVERSION    // useful for Serial, LCD and 7SEG Display
+//#define ENABLE_CONVERSION    // useful for Serial, LCD and 7SEG Display
 //#define ENABLE_PCF8583     // require CONVERSION and I2C/TWI
 //#define ENABLE_ONE_WIRE    // one wire protocol
 //#define ENABLE_DS18_2_ // Dallas temperature sensors, require ONE_WIRE
