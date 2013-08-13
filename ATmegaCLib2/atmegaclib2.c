@@ -16,6 +16,7 @@
  *  - (c) 2012 Vasile Guta Ciucur, https://sites.google.com/site/funlw65/
  *  - (c) xxxx Fabian Maximilian Thiele, website's gone
  *
+ *
  *******************************************************************************
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions are met:
