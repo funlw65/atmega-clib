@@ -66,6 +66,7 @@
 /* stuff used in all modes */
 inline void onboard_led_enable(void) {
 #if defined(__AVR_ATmega16__)      || \
+	defined(__AVR_ATmega16A__)     || \
     defined(__AVR_ATmega164P__)    || \
     defined(__AVR_ATmega32__)      || \
     defined(__AVR_ATmega324P__)    || \
@@ -89,6 +90,7 @@ inline void onboard_led_enable(void) {
 
 inline void onboard_led_on(void) {
 #if defined(__AVR_ATmega16__)      || \
+	defined(__AVR_ATmega16A__)     || \
     defined(__AVR_ATmega164P__)    || \
     defined(__AVR_ATmega32__)      || \
     defined(__AVR_ATmega324P__)    || \
@@ -112,6 +114,7 @@ inline void onboard_led_on(void) {
 
 inline void onboard_led_off(void) {
 #if defined(__AVR_ATmega16__)      || \
+	defined(__AVR_ATmega16A__)     || \
     defined(__AVR_ATmega164P__)    || \
     defined(__AVR_ATmega32__)      || \
     defined(__AVR_ATmega324P__)    || \
@@ -135,6 +138,7 @@ inline void onboard_led_off(void) {
 
 inline void onboard_led_toggle(void) {
 #if defined(__AVR_ATmega16__)      || \
+	defined(__AVR_ATmega16A__)     || \
     defined(__AVR_ATmega164P__)    || \
     defined(__AVR_ATmega32__)      || \
     defined(__AVR_ATmega324P__)    || \
@@ -2788,7 +2792,10 @@ volatile uint8_t ir_buffer[IR_BUFFER_SIZE];
  * interrupt context.
  *
  * tested with Vishay TSOP392 IR receiver and universal remote
- ****************************************************************************/ISR(INT0_vect) {
+ ****************************************************************************/
+//..
+
+ISR(INT0_vect) {
 	static uint8_t value;
 	static uint8_t address;
 	static uint8_t sigcount = 0;
@@ -2799,6 +2806,7 @@ volatile uint8_t ir_buffer[IR_BUFFER_SIZE];
     defined(__AVR_ATmega168P__)    || \
     defined(__AVR_ATmega328P__)    || \
     defined(__AVR_ATmega16__)      || \
+    defined(__AVR_ATmega16A__)     || \
     defined(__AVR_ATmega164P__)    || \
     defined(__AVR_ATmega32__)      || \
     defined(__AVR_ATmega324P__)    || \
@@ -2874,6 +2882,7 @@ volatile uint8_t ir_buffer[IR_BUFFER_SIZE];
     defined(__AVR_ATmega168P__)    || \
     defined(__AVR_ATmega328P__)    || \
     defined(__AVR_ATmega16__)      || \
+    defined(__AVR_ATmega16A__)     || \
     defined(__AVR_ATmega164P__)    || \
     defined(__AVR_ATmega32__)      || \
     defined(__AVR_ATmega324P__)    || \
@@ -2955,6 +2964,7 @@ volatile uint8_t ir_buffer[IR_BUFFER_SIZE];
 			{
 				if (pwmno == 1) {
 #if defined(__AVR_ATmega16__)      || \
+	defined(__AVR_ATmega16A__)     || \
     defined(__AVR_ATmega164P__)    || \
     defined(__AVR_ATmega32__)      || \
     defined(__AVR_ATmega324P__)    || \
@@ -2978,6 +2988,7 @@ volatile uint8_t ir_buffer[IR_BUFFER_SIZE];
 				}
 				if (pwmno == 2) {
 #if defined(__AVR_ATmega16__)      || \
+	defined(__AVR_ATmega16A__)     || \
     defined(__AVR_ATmega164P__)    || \
     defined(__AVR_ATmega32__)      || \
     defined(__AVR_ATmega324P__)    || \
@@ -3135,6 +3146,7 @@ volatile uint8_t ir_buffer[IR_BUFFER_SIZE];
 			{
 				if (pwmno == 1) {
 #if defined(__AVR_ATmega16__)      || \
+	defined(__AVR_ATmega16A__)     || \
     defined(__AVR_ATmega164P__)    || \
     defined(__AVR_ATmega32__)      || \
     defined(__AVR_ATmega324P__)    || \
@@ -3158,6 +3170,7 @@ volatile uint8_t ir_buffer[IR_BUFFER_SIZE];
 				}
 				if (pwmno == 2) {
 #if defined(__AVR_ATmega16__)      || \
+	defined(__AVR_ATmega16A__)     || \
     defined(__AVR_ATmega164P__)    || \
     defined(__AVR_ATmega32__)      || \
     defined(__AVR_ATmega324P__)    || \
@@ -3304,6 +3317,7 @@ volatile uint8_t ir_buffer[IR_BUFFER_SIZE];
 #if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
 			adcnum &= 15;
 #elif(defined(__AVR_ATmega16__)  || \
+	defined(__AVR_ATmega16A__)     || \
     defined(__AVR_ATmega164P__)    || \
     defined(__AVR_ATmega32__)      || \
     defined(__AVR_ATmega324P__)    || \
@@ -3340,6 +3354,7 @@ volatile uint8_t ir_buffer[IR_BUFFER_SIZE];
 #if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
 			adcnum &= 15;
 #elif(defined(__AVR_ATmega16__)    || \
+	defined(__AVR_ATmega16A__)     || \
     defined(__AVR_ATmega164P__)    || \
     defined(__AVR_ATmega32__)      || \
     defined(__AVR_ATmega324P__)    || \
