@@ -56,16 +56,16 @@
 // *****************************************************************************
 // Enabling/disabling additional functionality
 // *****************************************************************************
-#define UART_BAUD_RATE     57600 // default is 57600
-#define UART_BAUD_SELECT   (F_CPU / (UART_BAUD_RATE * 16L) - 1) //- don't touch
+//#define UART_BAUD_RATE     57600 // default is 57600
+//#define UART_BAUD_SELECT   (F_CPU / (UART_BAUD_RATE * 16L) - 1) //- don't touch
 //#define ENABLE_SERIAL // Interrupt based, require CONVERSION, conflicts with SERIAL_POLL
-#define ENABLE_SERIAL_POLL // require CONVERSION, conflicts with SERIAL
+//#define ENABLE_SERIAL_POLL // require CONVERSION, conflicts with SERIAL
 //#define ENABLE_PWMSERVO    // servo control (conflicts with regular pwm)
 //#define ENABLE_PWM         // motor or led control (conflicts with pwmservo)
 //#define ENABLE_IR          // infrared receiver, SONY protocol- it use TIMER0
-#define ENABLE_FREQMEASURE   // it can use one of TIMER1, TIMER3, TIMER4, TIMER5
+//#define ENABLE_FREQMEASURE   // it can use one of TIMER1, TIMER3, TIMER4, TIMER5, affects PWM
 //#define IR_DEBOUNCE        // uncomment to debounce IR with a delay
-//#define ENABLE_ADC         // analog to digital converter
+#define ENABLE_ADC         // analog to digital converter
 //#define ENABLE_TWI         // hardware I2C
 //#define ENABLE_I2C_SOFTWARE // software I2C
 #define ENABLE_CONVERSION    // useful for Serial, LCD and 7SEG Display
@@ -76,7 +76,7 @@
 //#define ENABLE_MILLIS     // use TIMER0, conflicts with NB_DELAYS
 //#define ENABLE_LCD         // require CONVERSION
 //#define ENABLE_GLCD
-//#define ENABLE_7SEG        // starting from one digit, up to eight digits.
+#define ENABLE_7SEG        // starting from one digit, up to eight digits.
 //#define ENABLE_ISPPROG     // Use Arduino as ISP Programmer - require SPI, conflict SD_Card
 //#define ENABLE_SPI         // hardware SPI (master)
 //#define ENABLE_SPI_INT     // hardware SPI use Interrupts
@@ -92,7 +92,7 @@
 #ifdef ENABLE_NB_DELAYS
 //the following define the number of non-blocking delays.
 // set it to the required number of non-blocking delays you need.
-#define DELAY_SLOTS  3 // the number of nb. delays
+#define DELAY_SLOTS  3 // the number of non-blocking delays needed by user
 int16_t isr_countdowns[DELAY_SLOTS];
 #endif
 
@@ -100,6 +100,7 @@ int16_t isr_countdowns[DELAY_SLOTS];
 // DEFINE 3 LEDS INDICATORS FOR THE ISP PROGRAMMER
 // TODO: To change the Heart Beat LED assignment because it must be a PWM channel!!!
 #if defined(__AVR_ATmega16__)      || \
+	defined(__AVR_ATmega16A__)     || \
     defined(__AVR_ATmega164P__)    || \
     defined(__AVR_ATmega32__)      || \
     defined(__AVR_ATmega324P__)    || \
@@ -210,6 +211,7 @@ int16_t isr_countdowns[DELAY_SLOTS];
 #define CAPTURE_USE_TIMER3       // ICP3 is pin 17
 // Sanguino
 #elif defined(__AVR_ATmega16__)      || \
+		defined(__AVR_ATmega16A__)     || \
 	    defined(__AVR_ATmega164P__)    || \
 	    defined(__AVR_ATmega32__)      || \
 	    defined(__AVR_ATmega324P__)    || \
@@ -400,8 +402,6 @@ int16_t isr_countdowns[DELAY_SLOTS];
 #ifdef ENABLE_7SEG
 // Define delay in microseconds between digits selection to avoid ghost effect
 #define SEG_DELAY 1500
-// Define buffer for how many digits you have/are going to use
-uint8_t SEG_DIGITS_BUFFER[4];
 // Define the type of 7seg (common anode or common cathode)
 #define SEG_COMMON_ANODE // comment this for common cathode type
 //select the type of 7seg display (how many digits you have/use)
@@ -414,6 +414,8 @@ uint8_t SEG_DIGITS_BUFFER[4];
 //#define SEG_DIGITS_6 6
 //#define SEG_DIGITS_7 7
 //#define SEG_DIGITS_8 8
+// Define buffer for how many digits you have/are going to use
+uint8_t SEG_DIGITS_BUFFER[4];
 
 // Define the specific ports and pins used for the 7 segment display
 // Default is for Arduino UNO or Severino M2 boards
@@ -443,7 +445,7 @@ uint8_t SEG_DIGITS_BUFFER[4];
 
 #define SEG_G_PORT PORTB
 #define SEG_G_DDR DDRB
-#define SEG_G_PIN PB0
+#define SEG_G_PIN PB2
 
 // comment/uncomment the following 3 lines if you use/don't use the dot(DP) indicator
 // don't forget to edit them according to your hardware settings.
@@ -498,7 +500,7 @@ uint8_t SEG_DIGITS_BUFFER[4];
 #endif
 
 // ============ END USER ZONE --- NO EDITING ALLOWED!       ====================
-// = ------------------------------------------------------------------------- =
+// = ************************************************************************* =
 // ============ DON'T MAKE MODIFICATIONS BELLOW THIS BORDER ====================
 
 #define FALSE  0
@@ -600,6 +602,7 @@ volatile uint8_t SPI_TC;
 
 //SETTING "pinout" depending on microcontroller
 #if defined(__AVR_ATmega16__)    || \
+	defined(__AVR_ATmega16A__)     || \
     defined(__AVR_ATmega164P__)    || \
     defined(__AVR_ATmega32__)      || \
     defined(__AVR_ATmega324P__)    || \
@@ -1469,15 +1472,6 @@ uint8_t _displaymode;
 #endif //ENABLE_LCD
 #ifdef ENABLE_GLCD
 // this is NOT user zone
-#if defined(__AVR_ATmega48__)    || \
-	    defined(__AVR_ATmega88__)      || \
-	    defined(__AVR_ATmega88P__)     || \
-	    defined(__AVR_ATmega168__)     || \
-	    defined(__AVR_ATmega168P__)    || \
-	    defined(__AVR_ATmega328P__)
-#error "You need a micro with at least 40 pins or two free full ports"
-#endif
-
 // Chips
 #define GLCD_CHIP1            0x00
 #define GLCD_CHIP2            0x01
@@ -1610,6 +1604,7 @@ void PCF8583_set_alarm_date(uint8_t day, uint8_t month);
   defined(__AVR_ATmega168P__)    || \
   defined(__AVR_ATmega328P__)    || \
   defined(__AVR_ATmega16__)      || \
+  defined(__AVR_ATmega16A__)     || \
   defined(__AVR_ATmega164P__)    || \
   defined(__AVR_ATmega32__)      || \
   defined(__AVR_ATmega324P__)    || \
