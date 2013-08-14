@@ -50,11 +50,11 @@
 #include <util/delay.h>
 #include <atmegaclib2.h>
 
-uint8_t i;
-
 void main(void) __attribute__((noreturn)); //this allows me to have a void main() function
 void main (void)
 {
+	uint8_t i;
+
 	// initializes the buffer, (involved) pins direction
 	seg_init();
 	// select the digit.
@@ -62,9 +62,10 @@ void main (void)
 	seg_select_digit(SELECT_DIGIT_ONE, 0);
 	// --
 	while(1){
-		for(i = 0; i < 37; i++)
+		for(i=0;i<37;i++){
 			seg_nibble(seg_digit_from_array(i));
-		_delay_ms(500);
+			_delay_ms(500);
+		}
 	}
 }
 // test svn update (Sep 19, 2012)
