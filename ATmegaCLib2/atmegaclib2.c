@@ -4196,97 +4196,92 @@ ISR(INT0_vect) {
 
 #endif // ENABLE_GLCD
 #ifdef ENABLE_7SEG
-// Define the segments
-#define SEG_A 0b00000001
-#define SEG_B 0b00000010
-#define SEG_C 0b00000100
-#define SEG_D 0b00001000
-#define SEG_E 0b00010000
-#define SEG_F 0b00100000
-#define SEG_G 0b01000000
-#ifdef SEG_DP_PORT
-#define SEG_DP 0b10000000
-#endif
-
 #ifdef SEG_COMMON_ANODE
 		const uint8_t seg_mask = 0xff;
 #else
 		const uint8_t seg_mask = 0x00;
 #endif
 
-		const uint8_t seg_code[] = {
+#ifdef SEG_DP_PORT
+#define SEG_NR_CHARS 38
+#else
+#define SEG_NR_CHARS 37
+#endif
+
+
+		const uint8_t PROGMEM seg_code[SEG_NR_CHARS]= {
 			// index 0 is character 0
-			SEG_A + SEG_B + SEG_C + SEG_D + SEG_E + SEG_F,
+			SEG_A+SEG_B+SEG_C+SEG_D+SEG_E+SEG_F,
 			// index 1 is character 1
-			SEG_B + SEG_C,
+			SEG_B+SEG_C,
 			// index 2 is character 2
-			SEG_A + SEG_B + SEG_D + SEG_E + SEG_G,
+			SEG_A+SEG_B+SEG_D+SEG_E+SEG_G,
 			// index 3 is character 3
-			SEG_A + SEG_B + SEG_C + SEG_D + SEG_G,
+			SEG_A+SEG_B+SEG_C+SEG_D+SEG_G,
 			// index 4 is character 4
-			SEG_F + SEG_G + SEG_B + SEG_C,
+			SEG_F+SEG_G+SEG_B+SEG_C,
 			// index 5 is character 5
-			SEG_A + SEG_C + SEG_D + SEG_F + SEG_G,
+			SEG_A+SEG_C+SEG_D+SEG_F+SEG_G,
 			// index 6 is character 6
-			SEG_A + SEG_C + SEG_D + SEG_E + SEG_F + SEG_G,
+			SEG_A+SEG_C+SEG_D+SEG_E+SEG_F+SEG_G,
 			// index 7 is character 7
-			SEG_A + SEG_B + SEG_C,
+			SEG_A+SEG_B+SEG_C,
 			// index 8 is character 8
-			SEG_A + SEG_B + SEG_C + SEG_D + SEG_E + SEG_F + SEG_G,
+			SEG_A+SEG_B+SEG_C+SEG_D+SEG_E+SEG_F+SEG_G,
 			// index 9 is character 9
-			SEG_A + SEG_B + SEG_C + SEG_D + SEG_F + SEG_G,
+			SEG_A+SEG_B+SEG_C+SEG_D+SEG_F+SEG_G,
 			// index 10 is character A
-			SEG_A + SEG_B + SEG_C + SEG_E + SEG_F + SEG_G,
+			SEG_A+SEG_B+SEG_C+SEG_E+SEG_F+SEG_G,
 			// index 11 is character b
-			SEG_C + SEG_D + SEG_E + SEG_F + SEG_G,
+			SEG_C+SEG_D+SEG_E+SEG_F+SEG_G,
 			// index 12 is character C
-			SEG_A + SEG_D + SEG_E + SEG_F,
+			SEG_A+SEG_D+SEG_E+SEG_F,
 			// index 13 is character d
-			SEG_B + SEG_C + SEG_D + SEG_E + SEG_G,
+			SEG_B+SEG_C+SEG_D+SEG_E+SEG_G,
 			// index 14 is character E
-			SEG_A + SEG_D + SEG_E + SEG_F + SEG_G,
+			SEG_A+SEG_D+SEG_E+SEG_F+SEG_G,
 			// index 15 is character F
-			SEG_A + SEG_E + SEG_F + SEG_G,
+			SEG_A+SEG_E+SEG_F+SEG_G,
 			// index 16 is character S
-			SEG_A + SEG_F + SEG_G + SEG_C + SEG_D,
+			SEG_A+SEG_F+SEG_G+SEG_C+SEG_D,
 			// index 17 is character c
-			SEG_G + SEG_E + SEG_D,
+			SEG_G+SEG_E+SEG_D,
 			// index 18 is character r
-			SEG_G + SEG_E,
+			SEG_G+SEG_E,
 			// index 19 is character H
-			SEG_F + SEG_E + SEG_G + SEG_B + SEG_C,
+			SEG_F+SEG_E+SEG_G+SEG_B+SEG_C,
 			// index 20 is character i
 			SEG_C,
 			// index 21 is character L
-			SEG_F + SEG_E + SEG_D,
+			SEG_F+SEG_E+SEG_D,
 			// index 22 is character o
-			SEG_G + SEG_C + SEG_D + SEG_E,
+			SEG_G+SEG_C+SEG_D+SEG_E,
 			// index 23 is character P
-			SEG_A + SEG_B + SEG_G + SEG_F + SEG_E,
+			SEG_A+SEG_B+SEG_G+SEG_F+SEG_E,
 			// index 24 is character U
-			SEG_F + SEG_E + SEG_D + SEG_C + SEG_B,
+			SEG_F+SEG_E+SEG_D+SEG_C+SEG_B,
 			// index 25 is character u
-			SEG_E + SEG_D + SEG_C,
+			SEG_E+SEG_D+SEG_C,
 			// index 26 is character h
-			SEG_F + SEG_E + SEG_G + SEG_C,
+			SEG_F+SEG_E+SEG_G+SEG_C,
 			// index 27 is character Y
-			SEG_F + SEG_G + SEG_B + SEG_C + SEG_D,
+			SEG_F+SEG_G+SEG_B+SEG_C+SEG_D,
 			// index 28 is character J
-			SEG_B + SEG_C + SEG_D,
+			SEG_B+SEG_C+SEG_D,
 			// index 29 is character N
-			SEG_E + SEG_F + SEG_A + SEG_B + SEG_C,
+			SEG_E+SEG_F+SEG_A+SEG_B+SEG_C,
 			// index 30 is character n
-			SEG_C + SEG_G + SEG_E,
+			SEG_C+SEG_G+SEG_E,
 			// index 31 is character T
-			SEG_A + SEG_F + SEG_E,
+			SEG_A+SEG_F+SEG_E,
 			// index 32 is character = (equal)
-			SEG_G + SEG_D,
+			SEG_G+SEG_D,
 			// index 33 is character - (minus)
 			SEG_G,
 			// index 34 is character _ (underline)
 			SEG_D,
 			// index 35 is character G
-			SEG_A + SEG_C + SEG_D + SEG_E + SEG_F,
+			SEG_A+SEG_C+SEG_D+SEG_E+SEG_F,
 			// index 36 is character space
 			0
 #ifdef SEG_DP_PORT
@@ -4295,7 +4290,6 @@ ISR(INT0_vect) {
 			, SEG_DP
 #endif
 		};
-
 		void seg_init(void) {
 #ifdef SEG_DIGITS_8
 			SEG_DIGITS_BUFFER[0] = 36;
@@ -4384,7 +4378,7 @@ ISR(INT0_vect) {
 		}
 
 		uint8_t seg_digit_from_array(uint8_t index) {
-			return seg_mask ^ seg_code[index];
+			return seg_mask ^ pgm_read_byte(&seg_code[index]);
 		}
 
 		void seg_nibble(uint8_t segments) {

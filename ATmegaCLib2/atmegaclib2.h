@@ -406,16 +406,16 @@ int16_t isr_countdowns[DELAY_SLOTS];
 #define SEG_COMMON_ANODE // comment this for common cathode type
 //select the type of 7seg display (how many digits you have/use)
 //must be the same as the buffer size (SEG_DIGITS_BUFFER[])
-//#define SEG_DIGITS_1 1
+#define SEG_DIGITS_1 1
 //#define SEG_DIGITS_2 2
 //#define SEG_DIGITS_3 3
-#define SEG_DIGITS_4 4
+//#define SEG_DIGITS_4 4
 //#define SEG_DIGITS_5 5
 //#define SEG_DIGITS_6 6
 //#define SEG_DIGITS_7 7
 //#define SEG_DIGITS_8 8
 // Define buffer for how many digits you have/are going to use
-uint8_t SEG_DIGITS_BUFFER[4];
+uint8_t SEG_DIGITS_BUFFER[1];
 
 // Define the specific ports and pins used for the 7 segment display
 // Default is for Arduino UNO or Severino M2 boards
@@ -460,17 +460,17 @@ uint8_t SEG_DIGITS_BUFFER[4];
 #define SEG_COMM_0_DDR DDRC
 #define SEG_COMM_0_PIN PC2
 
-#define SEG_COMM_1_PORT PORTC
-#define SEG_COMM_1_DDR DDRC
-#define SEG_COMM_1_PIN PC3
+//#define SEG_COMM_1_PORT PORTC
+//#define SEG_COMM_1_DDR DDRC
+//#define SEG_COMM_1_PIN PC3
 
-#define SEG_COMM_2_PORT PORTC
-#define SEG_COMM_2_DDR DDRC
-#define SEG_COMM_2_PIN PC4
+//#define SEG_COMM_2_PORT PORTC
+//#define SEG_COMM_2_DDR DDRC
+//#define SEG_COMM_2_PIN PC4
 
-#define SEG_COMM_3_PORT PORTC
-#define SEG_COMM_3_DDR DDRC
-#define SEG_COMM_3_PIN PC5
+//#define SEG_COMM_3_PORT PORTC
+//#define SEG_COMM_3_DDR DDRC
+//#define SEG_COMM_3_PIN PC5
 
 //#define SEG_COMM_4_PORT PORT
 //#define SEG_COMM_4_DDR DDR
@@ -1556,12 +1556,25 @@ typedef enum mydigit {
 	SELECT_DIGIT_EIGHT = 128
 }MyDigit;
 
+// Define the segments
+#define SEG_A 0b00000001   //  1
+#define SEG_B 0b00000010   //  2
+#define SEG_C 0b00000100   //  4
+#define SEG_D 0b00001000   //  8
+#define SEG_E 0b00010000   // 16
+#define SEG_F 0b00100000   // 32
+#define SEG_G 0b01000000   // 64
+#ifdef SEG_DP_PORT
+#define SEG_DP 0b10000000  //128
+#endif
+
 void seg_init(void);
 uint8_t seg_digit_from_array(uint8_t index);
 void seg_nibble(uint8_t);
 void seg_common_select(uint8_t);
 void seg_select_digit(uint8_t, uint8_t);
 #endif //7-seg
+//--
 #ifdef ENABLE_PCF8583 //it requires Hardware or Software I2C
 uint8_t PCF8583_read(uint8_t address);
 void PCF8583_write(uint8_t address, uint8_t data);
