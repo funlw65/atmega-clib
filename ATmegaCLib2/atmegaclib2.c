@@ -378,7 +378,7 @@ uint8_t FreqMeasure_available(void) {
 	head = buffer_head;
 	tail = buffer_tail;
 	if (head >= tail)
-		return head - tail;
+	return head - tail;
 	return FREQMEASURE_BUFFER_LEN + head - tail;
 }
 
@@ -389,10 +389,10 @@ uint32_t FreqMeasure_read(void) {
 	head = buffer_head;
 	tail = buffer_tail;
 	if (head == tail)
-		return 0xFFFFFFFF;
+	return 0xFFFFFFFF;
 	tail = tail + 1;
 	if (tail >= FREQMEASURE_BUFFER_LEN)
-		tail = 0;
+	tail = 0;
 	value = buffer_value[tail];
 	buffer_tail = tail;
 	return value;
@@ -429,7 +429,7 @@ ISR(TIMER_CAPTURE_VECTOR) {
 	// store it into the buffer
 	i = buffer_head + 1;
 	if (i >= FREQMEASURE_BUFFER_LEN)
-		i = 0;
+	i = 0;
 	if (i != buffer_tail) {
 		buffer_value[i] = period;
 		buffer_head = i;
@@ -585,9 +585,21 @@ void serial_flush(void) { // sort of...
 }
 
 #endif // end serial with interrupt
+//--
 #ifdef ENABLE_SERIAL_POLL
 /* Initialize UART */
 void serial_init(void) {
+#if defined(USART_RXC_vect) // for ATmega16A
+	/* Set the baud rate */
+	UBRRH = (uint8_t) (UART_BAUD_SELECT >> 8);
+	UBRRL = (uint8_t) UART_BAUD_SELECT;
+	/* Enable UART receiver and transmitter */
+
+	UCSRB = ((1 << RXEN) | (1 << TXEN));
+	/* Set frame format: 8 data 2stop */
+	UCSRC = (1 << USBS) | (1 << UCSZ1) | (1 << UCSZ0); //For devices with Extended IO
+	//UCSR0C = (1<<URSEL)|(1<<USBS0)|(1<<UCSZ01)|(1<<UCSZ00);   //For devices without Extended IO
+#else
 	/* Set the baud rate */
 	UBRR0H = (uint8_t) (UART_BAUD_SELECT >> 8);
 	UBRR0L = (uint8_t) UART_BAUD_SELECT;
@@ -596,15 +608,24 @@ void serial_init(void) {
 	/* Set frame format: 8 data 2stop */
 	UCSR0C = (1 << USBS0) | (1 << UCSZ01) | (1 << UCSZ00); //For devices with Extended IO
 	//UCSR0C = (1<<URSEL)|(1<<USBS0)|(1<<UCSZ01)|(1<<UCSZ00);   //For devices without Extended IO
+#endif
 }
 
 /* Read and write functions */
 uint8_t serial_getchar(void) {
+#if defined(USART_RXC_vect) // for ATmega16A
 	/* Wait for incoming data */
-	while (!(UCSR0A & (1 << RXC0)))
+	while (!(UCSRA & (1 << RXC)))
 		;
 	/* Return the data */
+	return UDR;
+#else
+	/* Wait for incoming data */
+	while (!(UCSR0A & (1 << RXC0)))
+	;
+	/* Return the data */
 	return UDR0;
+#endif
 }
 #endif // END SERIAL_POLL
 //
@@ -612,12 +633,13 @@ uint8_t serial_getchar(void) {
 void serial_putchar(uint8_t data) {
 	/* Wait for empty transmit buffer */
 #if defined(USART_RXC_vect) // added for ATmega16A
-	while (!(UCSRA & (1 << UDRE)));
+	while (!(UCSRA & (1 << UDRE)))
+		;
 	/* Start transmission */
 	UDR = data;
 #else
 	while (!(UCSR0A & (1 << UDRE0)))
-		;
+	;
 	/* Start transmission */
 	UDR0 = data;
 #endif
@@ -2812,7 +2834,6 @@ volatile uint8_t ir_buffer[IR_BUFFER_SIZE];
  * tested with Vishay TSOP392 IR receiver and universal remote
  ****************************************************************************/
 //..
-
 ISR(INT0_vect) {
 	static uint8_t value;
 	static uint8_t address;
@@ -2961,26 +2982,26 @@ ISR(INT0_vect) {
 		}
 #endif // end IR
 #ifdef ENABLE_PWMSERVO
-		/*************************************************************************
-		 * pwmservo_init(pwmno)
-		 * pwmno 1 & 2 are preferred b/c they provide higher resolution
-		 * pwmno:
-		 * 1 - OC1A (avr pin 15 PB1) - arduino digital pin 9
-		 * 2 - OC1B (avr pin 16 PB2) - arduino digital pin 10
-		 * 3 - OC2A (avr pin 17 PB3) - arduino digital pin 11
-		 * 4 - OC2B (avr pin  5 PD3) - arduino digital pin 3
-		 * 5 - OC0A (avr pin 12 PD6) - arduino digital pin 6  (conflicts with IR)
-		 * 6 - OC0B (avr pin 11 PD5) - arduino digital pin 5  (conflicts with IR)
-		 *************************************************************************/
-		void pwmservo_init(uint8_t pwmno) {
-			// FIXME: need to reserve pins and counters at compile time
-			// FIXME: conflict w/ IR if it runs at 8MHz
-			if (!pwmno || (pwmno > 6))///* invalid */
-			return;
+/*************************************************************************
+ * pwmservo_init(pwmno)
+ * pwmno 1 & 2 are preferred b/c they provide higher resolution
+ * pwmno:
+ * 1 - OC1A (avr pin 15 PB1) - arduino digital pin 9
+ * 2 - OC1B (avr pin 16 PB2) - arduino digital pin 10
+ * 3 - OC2A (avr pin 17 PB3) - arduino digital pin 11
+ * 4 - OC2B (avr pin  5 PD3) - arduino digital pin 3
+ * 5 - OC0A (avr pin 12 PD6) - arduino digital pin 6  (conflicts with IR)
+ * 6 - OC0B (avr pin 11 PD5) - arduino digital pin 5  (conflicts with IR)
+ *************************************************************************/
+void pwmservo_init(uint8_t pwmno) {
+	// FIXME: need to reserve pins and counters at compile time
+	// FIXME: conflict w/ IR if it runs at 8MHz
+	if (!pwmno || (pwmno > 6))///* invalid */
+	return;
 
-			if ((pwmno == 1) || (pwmno == 2))// /* TCNT1 */
-			{
-				if (pwmno == 1) {
+	if ((pwmno == 1) || (pwmno == 2))// /* TCNT1 */
+	{
+		if (pwmno == 1) {
 #if defined(__AVR_ATmega16__)      || \
 	defined(__AVR_ATmega16A__)     || \
     defined(__AVR_ATmega164P__)    || \
@@ -2990,21 +3011,21 @@ ISR(INT0_vect) {
     defined(__AVR_ATmega644__)     || \
     defined(__AVR_ATmega644P__)    || \
     defined(__AVR_ATmega1284P__)
-					sbi(DDRD, DDD5);
+			sbi(DDRD, DDD5);
 #elif defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__) // Arduino Mega1280
-					sbi(DDRB, DDB5);
+			sbi(DDRB, DDB5);
 #elif defined(__AVR_ATmega48__)    || \
     defined(__AVR_ATmega88__)      || \
     defined(__AVR_ATmega88P__)     || \
     defined(__AVR_ATmega168__)     || \
     defined(__AVR_ATmega168P__)    || \
     defined(__AVR_ATmega328P__)
-					sbi(DDRB, 1);
+			sbi(DDRB, 1);
 #endif
-					OCR1A = SERVO_MID_POS16; ///* initial value */
-					TCCR1A |= _BV(COM1A1);///* turn on PWM 1 */
-				}
-				if (pwmno == 2) {
+			OCR1A = SERVO_MID_POS16; ///* initial value */
+			TCCR1A |= _BV(COM1A1);///* turn on PWM 1 */
+		}
+		if (pwmno == 2) {
 #if defined(__AVR_ATmega16__)      || \
 	defined(__AVR_ATmega16A__)     || \
     defined(__AVR_ATmega164P__)    || \
@@ -3014,155 +3035,155 @@ ISR(INT0_vect) {
     defined(__AVR_ATmega644__)     || \
     defined(__AVR_ATmega644P__)    || \
     defined(__AVR_ATmega1284P__)
-					sbi(DDRD, DDD4);
+			sbi(DDRD, DDD4);
 #elif defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__) // Arduino Mega1280
-					sbi(DDRB, DDB6);
+			sbi(DDRB, DDB6);
 #elif defined(__AVR_ATmega48__)    || \
     defined(__AVR_ATmega88__)      || \
     defined(__AVR_ATmega88P__)     || \
     defined(__AVR_ATmega168__)     || \
     defined(__AVR_ATmega168P__)    || \
     defined(__AVR_ATmega328P__)
-					sbi(DDRB, 2);
+			sbi(DDRB, 2);
 #endif
-					OCR1B = SERVO_MID_POS16;
-					TCCR1A |= _BV(COM1B1); ///* turn on PWM 2 */
-				}
-				TCCR1A |= _BV(WGM11); ///* PWM phase correct */
-				TCCR1B |= _BV(WGM13) | _BV(WGM12);///* PWM phase correct */
-				TCCR1B |= _BV(CS11);
+			OCR1B = SERVO_MID_POS16;
+			TCCR1A |= _BV(COM1B1); ///* turn on PWM 2 */
+		}
+		TCCR1A |= _BV(WGM11); ///* PWM phase correct */
+		TCCR1B |= _BV(WGM13) | _BV(WGM12);///* PWM phase correct */
+		TCCR1B |= _BV(CS11);
 #if (F_CPU == 16000000)
-				ICR1 = 0x9C3F; ///* 16bit */
+		ICR1 = 0x9C3F; ///* 16bit */
 #endif
 #if (F_CPU == 8000000)
-				ICR1 = 0x4E1F; ///* 16bit */
+		ICR1 = 0x4E1F; ///* 16bit */
 #endif
-				TCNT1H = 0; ///* initial value */
-				TCNT1L = 0;///* initial value */
-			}
+		TCNT1H = 0; ///* initial value */
+		TCNT1L = 0;///* initial value */
+	}
 
-			if ((pwmno == 3) || (pwmno == 4)) // /* TCNT1 */
-			{
-				if (pwmno == 3) {
+	if ((pwmno == 3) || (pwmno == 4)) // /* TCNT1 */
+	{
+		if (pwmno == 3) {
 #if defined(__AVR_ATmega164P__)    || \
     defined(__AVR_ATmega324P__)    || \
     defined(__AVR_ATmega324PA__)   || \
     defined(__AVR_ATmega644__)     || \
     defined(__AVR_ATmega644P__)    || \
     defined(__AVR_ATmega1284P__) // Sanguino
-					sbi(DDRD, DDD7);
+			sbi(DDRD, DDD7);
 #elif defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__) // Arduino Mega1280
-					sbi(DDRB, DDB4);
+			sbi(DDRB, DDB4);
 #elif defined(__AVR_ATmega48__)    || \
     defined(__AVR_ATmega88__)      || \
     defined(__AVR_ATmega88P__)     || \
     defined(__AVR_ATmega168__)     || \
     defined(__AVR_ATmega168P__)    || \
     defined(__AVR_ATmega328P__)
-					sbi(DDRB, 3);
+			sbi(DDRB, 3);
 #endif
-					OCR2A = SERVO_MID_POS8; // /* initial value */
-					TCCR2A |= _BV(COM2A1);// /* turn on PWM 1 */
-				}
-				if (pwmno == 4) {
+			OCR2A = SERVO_MID_POS8; // /* initial value */
+			TCCR2A |= _BV(COM2A1);// /* turn on PWM 1 */
+		}
+		if (pwmno == 4) {
 #if defined(__AVR_ATmega164P__)    || \
     defined(__AVR_ATmega324P__)    || \
     defined(__AVR_ATmega324PA__)   || \
     defined(__AVR_ATmega644__)     || \
     defined(__AVR_ATmega644P__)    || \
     defined(__AVR_ATmega1284P__) // Sanguino
-					sbi(DDRD, DDD6);
+			sbi(DDRD, DDD6);
 #elif defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__) // Arduino Mega1280
-					sbi(DDRH, DDH6);
+			sbi(DDRH, DDH6);
 #elif defined(__AVR_ATmega48__)    || \
     defined(__AVR_ATmega88__)      || \
     defined(__AVR_ATmega88P__)     || \
     defined(__AVR_ATmega168__)     || \
     defined(__AVR_ATmega168P__)    || \
     defined(__AVR_ATmega328P__)
-					sbi(DDRD, 3);
+			sbi(DDRD, 3);
 #endif
-					OCR2B = SERVO_MID_POS8;
-					TCCR2A |= _BV(COM2B1); // /* turn on PWM 2 */
-				}
+			OCR2B = SERVO_MID_POS8;
+			TCCR2A |= _BV(COM2B1); // /* turn on PWM 2 */
+		}
 #if (F_CPU == 16000000)
-				TCCR2A |= _BV(WGM20) | _BV(WGM21); // /* fast PWM */
+		TCCR2A |= _BV(WGM20) | _BV(WGM21); // /* fast PWM */
 #endif
 #if (F_CPU == 8000000)
-				TCCR2A |= _BV(WGM20); ///* fast PWM */
+		TCCR2A |= _BV(WGM20); ///* fast PWM */
 #endif
-				TCCR2B |= _BV(CS20) | _BV(CS21) | _BV(CS22);
-				TCNT2 = 0; ///* initial value */
-			}
+		TCCR2B |= _BV(CS20) | _BV(CS21) | _BV(CS22);
+		TCNT2 = 0; ///* initial value */
+	}
 #if !defined(ENABLE_IR) && !defined(ENABLE_MILLIS)
-			// define the next two channels (5 & 6)
+	// define the next two channels (5 & 6)
 #endif
-		}
+}
 
-		void __pwmservo_set(uint8_t servo, uint16_t pwmval) {
-			//printf("__pwmservo_set setting %d\n\r", pwmval);
-			if (servo == 1)
-			OCR1A = pwmval;
-			else if (servo == 2)
-			OCR1B = pwmval;
-			else if (servo == 3)
-			OCR2A = pwmval;
-			else if (servo == 4)
-			OCR2B = pwmval;
-		}
+void __pwmservo_set(uint8_t servo, uint16_t pwmval) {
+	//printf("__pwmservo_set setting %d\n\r", pwmval);
+	if (servo == 1)
+	OCR1A = pwmval;
+	else if (servo == 2)
+	OCR1B = pwmval;
+	else if (servo == 3)
+	OCR2A = pwmval;
+	else if (servo == 4)
+	OCR2B = pwmval;
+}
 
-		/***************************************************************************
-		 * pwmservo_set
-		 * servo - 1-6 (servo number that we already called init on)
-		 * pwmval - from 0-255 - provides the position for the servo
-		 *          0 makes a 1.5ms pulse
-		 *          255 makes a 2.5ms pulse
-		 ***************************************************************************/
-		void pwmservo_set(uint8_t servo, uint8_t pwmval) {
-			//printf("pwmservo_set setting %d to %d\n\r", servo, pwmval);
+/***************************************************************************
+ * pwmservo_set
+ * servo - 1-6 (servo number that we already called init on)
+ * pwmval - from 0-255 - provides the position for the servo
+ *          0 makes a 1.5ms pulse
+ *          255 makes a 2.5ms pulse
+ ***************************************************************************/
+void pwmservo_set(uint8_t servo, uint8_t pwmval) {
+	//printf("pwmservo_set setting %d to %d\n\r", servo, pwmval);
 
-			if ((servo == 1) || (servo == 2))
-			__pwmservo_set(servo,
-					(((uint32_t) pwmval
-									* ((uint32_t) SERVO_MAX_POS16
-											- (uint32_t) SERVO_MIN_POS16)) / (uint32_t) 256)
-					+ (uint32_t) SERVO_MIN_POS16);
+	if ((servo == 1) || (servo == 2))
+	__pwmservo_set(servo,
+			(((uint32_t) pwmval
+							* ((uint32_t) SERVO_MAX_POS16
+									- (uint32_t) SERVO_MIN_POS16)) / (uint32_t) 256)
+			+ (uint32_t) SERVO_MIN_POS16);
 
-			if ((servo == 3) || (servo == 4))
-			__pwmservo_set(servo,
-					(((uint32_t) pwmval
-									* ((uint32_t) SERVO_MAX_POS8 - (uint32_t) SERVO_MIN_POS8))
-							/ (uint32_t) 256) + (uint32_t) SERVO_MIN_POS8);
-		}
+	if ((servo == 3) || (servo == 4))
+	__pwmservo_set(servo,
+			(((uint32_t) pwmval
+							* ((uint32_t) SERVO_MAX_POS8 - (uint32_t) SERVO_MIN_POS8))
+					/ (uint32_t) 256) + (uint32_t) SERVO_MIN_POS8);
+}
 
-		/* not tested yet
-		 void pwmservo_setf(uint8_t servo, float pwmval)
-		 {
-		 if (servo == 1)
-		 OCR1A = pwmval * 255.0;
-		 else if (servo == 2)
-		 OCR1B = pwmval * 255.0;
-		 } */
+/* not tested yet
+ void pwmservo_setf(uint8_t servo, float pwmval)
+ {
+ if (servo == 1)
+ OCR1A = pwmval * 255.0;
+ else if (servo == 2)
+ OCR1B = pwmval * 255.0;
+ } */
 #endif //end PWM SERVO
 #ifdef ENABLE_PWM
-		/*************************************************************************
-		 * pwm_init(pwmno)
-		 * pwmno:
-		 * 1 - OC1A (avr pin 15 PB1) - arduino digital pin 9
-		 * 2 - OC1B (avr pin 16 PB2) - arduino digital pin 10
-		 * 3 - OC2A (avr pin 17 PB3) - arduino digital pin 11
-		 * 4 - OC2B (avr pin  5 PD3) - arduino digital pin 3
-		 * 5 - OC0A (avr pin 12 PD6) - arduino digital pin 6  (conflicts with IR)
-		 * 6 - OC0B (avr pin 11 PD5) - arduino digital pin 5  (conflicts with IR)
-		 *************************************************************************/
-		void pwm_init(uint8_t pwmno) {
-			// FIXME: need to reserve pins and counters at compile time
-			if (!pwmno || (pwmno > 6))// invalid
-			return;
+/*************************************************************************
+ * pwm_init(pwmno)
+ * pwmno:
+ * 1 - OC1A (avr pin 15 PB1) - arduino digital pin 9
+ * 2 - OC1B (avr pin 16 PB2) - arduino digital pin 10
+ * 3 - OC2A (avr pin 17 PB3) - arduino digital pin 11
+ * 4 - OC2B (avr pin  5 PD3) - arduino digital pin 3
+ * 5 - OC0A (avr pin 12 PD6) - arduino digital pin 6  (conflicts with IR)
+ * 6 - OC0B (avr pin 11 PD5) - arduino digital pin 5  (conflicts with IR)
+ *************************************************************************/
+void pwm_init(uint8_t pwmno) {
+	// FIXME: need to reserve pins and counters at compile time
+	if (!pwmno || (pwmno > 6))// invalid
+	return;
 
-			if ((pwmno == 1) || (pwmno == 2))// /* TCNT1 */
-			{
-				if (pwmno == 1) {
+	if ((pwmno == 1) || (pwmno == 2))// /* TCNT1 */
+	{
+		if (pwmno == 1) {
 #if defined(__AVR_ATmega16__)      || \
 	defined(__AVR_ATmega16A__)     || \
     defined(__AVR_ATmega164P__)    || \
@@ -3172,21 +3193,21 @@ ISR(INT0_vect) {
     defined(__AVR_ATmega644__)     || \
     defined(__AVR_ATmega644P__)    || \
     defined(__AVR_ATmega1284P__)
-					sbi(DDRD, DDD5);
+			sbi(DDRD, DDD5);
 #elif defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__) // Arduino Mega1280
-					sbi(DDRB, DDB5);
+			sbi(DDRB, DDB5);
 #elif defined(__AVR_ATmega48__)    || \
     defined(__AVR_ATmega88__)      || \
     defined(__AVR_ATmega88P__)     || \
     defined(__AVR_ATmega168__)     || \
     defined(__AVR_ATmega168P__)    || \
     defined(__AVR_ATmega328P__)
-					sbi(DDRB, 1);
+			sbi(DDRB, 1);
 #endif
-					OCR1A = 0; ///* initial value */
-					TCCR1A |= _BV(COM1A1);// /* turn on PWM 1 */
-				}
-				if (pwmno == 2) {
+			OCR1A = 0; ///* initial value */
+			TCCR1A |= _BV(COM1A1);// /* turn on PWM 1 */
+		}
+		if (pwmno == 2) {
 #if defined(__AVR_ATmega16__)      || \
 	defined(__AVR_ATmega16A__)     || \
     defined(__AVR_ATmega164P__)    || \
@@ -3196,144 +3217,144 @@ ISR(INT0_vect) {
     defined(__AVR_ATmega644__)     || \
     defined(__AVR_ATmega644P__)    || \
     defined(__AVR_ATmega1284P__)
-					sbi(DDRD, DDD4);
+			sbi(DDRD, DDD4);
 #elif defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__) // Arduino Mega1280
-					sbi(DDRB, DDB6);
+			sbi(DDRB, DDB6);
 #elif defined(__AVR_ATmega48__)    || \
     defined(__AVR_ATmega88__)      || \
     defined(__AVR_ATmega88P__)     || \
     defined(__AVR_ATmega168__)     || \
     defined(__AVR_ATmega168P__)    || \
     defined(__AVR_ATmega328P__)
-					sbi(DDRB, 2);
+			sbi(DDRB, 2);
 #endif
-					OCR1B = 0;
-					TCCR1A |= _BV(COM1B1); ///* turn on PWM 2 */
-				}
-				TCCR1A |= _BV(WGM10); ///* PWM 8bit */
-				//TCCR1B |= _BV(WGM13) | _BV(WGM12);// /* PWM phase correct */
-				TCCR1B |= _BV(CS12);// /* div by 256 */
-				TCNT1H = 0;///* initial value */
-				TCNT1L = 0;///* initial value */
-			}
+			OCR1B = 0;
+			TCCR1A |= _BV(COM1B1); ///* turn on PWM 2 */
+		}
+		TCCR1A |= _BV(WGM10); ///* PWM 8bit */
+		//TCCR1B |= _BV(WGM13) | _BV(WGM12);// /* PWM phase correct */
+		TCCR1B |= _BV(CS12);// /* div by 256 */
+		TCNT1H = 0;///* initial value */
+		TCNT1L = 0;///* initial value */
+	}
 
-			if ((pwmno == 3) || (pwmno == 4)) ///* TCNT1 */
-			{
-				if (pwmno == 3) {
+	if ((pwmno == 3) || (pwmno == 4)) ///* TCNT1 */
+	{
+		if (pwmno == 3) {
 #if defined(__AVR_ATmega164P__)    || \
     defined(__AVR_ATmega324P__)    || \
     defined(__AVR_ATmega324PA__)   || \
     defined(__AVR_ATmega644__)     || \
     defined(__AVR_ATmega644P__)    || \
     defined(__AVR_ATmega1284P__) // Sanguino
-					sbi(DDRD, DDD7);
+			sbi(DDRD, DDD7);
 #elif defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__) // Arduino Mega1280
-					sbi(DDRB, DDB4);
+			sbi(DDRB, DDB4);
 #elif defined(__AVR_ATmega48__)    || \
     defined(__AVR_ATmega88__)      || \
     defined(__AVR_ATmega88P__)     || \
     defined(__AVR_ATmega168__)     || \
     defined(__AVR_ATmega168P__)    || \
     defined(__AVR_ATmega328P__)
-					sbi(DDRB, 3);
+			sbi(DDRB, 3);
 #endif
-					OCR2A = 0; ///* initial value */
-					TCCR2A |= _BV(COM2A1);///* turn on PWM 1 */
-				}
-				if (pwmno == 4) {
+			OCR2A = 0; ///* initial value */
+			TCCR2A |= _BV(COM2A1);///* turn on PWM 1 */
+		}
+		if (pwmno == 4) {
 #if defined(__AVR_ATmega164P__)    || \
     defined(__AVR_ATmega324P__)    || \
     defined(__AVR_ATmega324PA__)   || \
     defined(__AVR_ATmega644__)     || \
     defined(__AVR_ATmega644P__)    || \
     defined(__AVR_ATmega1284P__) // Sanguino
-					sbi(DDRD, DDD6);
+			sbi(DDRD, DDD6);
 #elif defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__) // Arduino Mega1280
-					sbi(DDRH, DDH6);
+			sbi(DDRH, DDH6);
 #elif defined(__AVR_ATmega48__)    || \
     defined(__AVR_ATmega88__)      || \
     defined(__AVR_ATmega88P__)     || \
     defined(__AVR_ATmega168__)     || \
     defined(__AVR_ATmega168P__)    || \
     defined(__AVR_ATmega328P__)
-					sbi(DDRD, 3);
+			sbi(DDRD, 3);
 #endif
-					OCR2B = 0;
-					TCCR2A |= _BV(COM2B1); ///* turn on PWM 2 */
-				}
-				TCCR2A |= _BV(WGM20); ///* PWM 8bit */
-				TCCR2B |= _BV(CS21) | _BV(CS22);// /* div by 256 for ovfl 244hz*/
-				TCNT2 = 0;///* initial value */
-			}
+			OCR2B = 0;
+			TCCR2A |= _BV(COM2B1); ///* turn on PWM 2 */
+		}
+		TCCR2A |= _BV(WGM20); ///* PWM 8bit */
+		TCCR2B |= _BV(CS21) | _BV(CS22);// /* div by 256 for ovfl 244hz*/
+		TCNT2 = 0;///* initial value */
+	}
 #if !defined(ENABLE_IR) && !defined(ENABLE_MILLIS)
-			// define the next two channels (5 & 6)
+	// define the next two channels (5 & 6)
 #endif
-		}
+}
 
-		/***************************************************************************
-		 * pwm_set
-		 * pwmchan - 1-6 (servo number that we already called init on)
-		 * pwmval - from 0-255 - provides the position for the servo
-		 *          0 makes a 1.5ms pulse
-		 *          255 makes a 2.5ms pulse
-		 ***************************************************************************/
-		void pwm_set(uint8_t pwmchan, uint8_t pwmval) {
-			//printf("__pwm_set setting %d\n\r", pwmval);
-			if (pwmchan == 1)
-			OCR1A = pwmval;
-			else if (pwmchan == 2)
-			OCR1B = pwmval;
-			else if (pwmchan == 3)
-			OCR2A = pwmval;
-			else if (pwmchan == 4)
-			OCR2B = pwmval;
-		}
+/***************************************************************************
+ * pwm_set
+ * pwmchan - 1-6 (servo number that we already called init on)
+ * pwmval - from 0-255 - provides the position for the servo
+ *          0 makes a 1.5ms pulse
+ *          255 makes a 2.5ms pulse
+ ***************************************************************************/
+void pwm_set(uint8_t pwmchan, uint8_t pwmval) {
+	//printf("__pwm_set setting %d\n\r", pwmval);
+	if (pwmchan == 1)
+	OCR1A = pwmval;
+	else if (pwmchan == 2)
+	OCR1B = pwmval;
+	else if (pwmchan == 3)
+	OCR2A = pwmval;
+	else if (pwmchan == 4)
+	OCR2B = pwmval;
+}
 
-		/* not tested yet
-		 void pwm_setf(uint8_t pwmchan, float pwmval)
-		 {
-		 if (pwmchan == 1)
-		 OCR1A = pwmval * 255.0;
-		 else if (servo == 2)
-		 OCR1B = pwmval * 255.0;
-		 } */
+/* not tested yet
+ void pwm_setf(uint8_t pwmchan, float pwmval)
+ {
+ if (pwmchan == 1)
+ OCR1A = pwmval * 255.0;
+ else if (servo == 2)
+ OCR1B = pwmval * 255.0;
+ } */
 #endif
 
 #ifdef ENABLE_ADC
-		/***************************************************************************
-		 * adc_init()
-		 *
-		 * gets our ADC ready to take 10bit samples. See atmegaclib.h for
-		 * ADC reference and prescaler definitions.
-		 ***************************************************************************/
-		void adc_init(uint8_t adc_reference, uint8_t adc_prescaler) {
-			///* initialize the ADC - 10bit mode */
-			ADMUX |= (adc_reference << 6);
-			ADCSRA |= _BV(ADEN);// for now we don't do this in the ISR | _BV(ADIE);
-			ADCSRA |= (adc_prescaler & 7);//adc prescaler
-			//Powering ADC peripheral
+/***************************************************************************
+ * adc_init()
+ *
+ * gets our ADC ready to take 10bit samples. See atmegaclib.h for
+ * ADC reference and prescaler definitions.
+ ***************************************************************************/
+void adc_init(uint8_t adc_reference, uint8_t adc_prescaler) {
+	///* initialize the ADC - 10bit mode */
+	ADMUX |= (adc_reference << 6);
+	ADCSRA |= _BV(ADEN);// for now we don't do this in the ISR | _BV(ADIE);
+	ADCSRA |= (adc_prescaler & 7);//adc prescaler
+	//Powering ADC peripheral
 #ifdef PRR0
-			PRR0 &= ~_BV(PRADC);
+	PRR0 &= ~_BV(PRADC);
 #elif defined(PRR)
-			PRR &= ~_BV(PRADC);
+	PRR &= ~_BV(PRADC);
 #endif
-		}
+}
 
-		/***************************************************************************
-		 * adc_get()
-		 *
-		 * adcnum - specifies which ADC pin you want to read from
-		 *        - 0 through 5 corresponds to PC0-PC5 (32 pin SMD and 28 pin DIP capsule) and
-		 *        - 0 through 7 corresponds to PA0-PA7 (44 pin SMD and 40 pin DIP capsule)
-		 *        - 0 through 15 is for ATmega1280/2560
-		 *
-		 * returns 16 bit unsigned value between 0 and 1024 with 0 meaning 0v and
-		 *          1024 meaning at or above voltage on AREF pin
-		 ***************************************************************************/
-		uint16_t adc_get(uint8_t adcnum) {
-			static uint8_t current_adcnum = 17; // high enough to avoid conflict if atmega1280 support...
+/***************************************************************************
+ * adc_get()
+ *
+ * adcnum - specifies which ADC pin you want to read from
+ *        - 0 through 5 corresponds to PC0-PC5 (32 pin SMD and 28 pin DIP capsule) and
+ *        - 0 through 7 corresponds to PA0-PA7 (44 pin SMD and 40 pin DIP capsule)
+ *        - 0 through 15 is for ATmega1280/2560
+ *
+ * returns 16 bit unsigned value between 0 and 1024 with 0 meaning 0v and
+ *          1024 meaning at or above voltage on AREF pin
+ ***************************************************************************/
+uint16_t adc_get(uint8_t adcnum) {
+	static uint8_t current_adcnum = 17; // high enough to avoid conflict if atmega1280 support...
 #if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
-			adcnum &= 15;
+	adcnum &= 15;
 #elif(defined(__AVR_ATmega16__)  || \
 	defined(__AVR_ATmega16A__)     || \
     defined(__AVR_ATmega164P__)    || \
@@ -3343,34 +3364,34 @@ ISR(INT0_vect) {
     defined(__AVR_ATmega644__)     || \
     defined(__AVR_ATmega644P__)    || \
     defined(__AVR_ATmega1284P__))
-			adcnum &= 7;
+	adcnum &= 7;
 #elif defined(__AVR_ATmega48__)  || \
     defined(__AVR_ATmega88__)      || \
     defined(__AVR_ATmega88P__)     || \
     defined(__AVR_ATmega168__)     || \
     defined(__AVR_ATmega168P__)    || \
     defined(__AVR_ATmega328P__)
-			adcnum &= 5;
+	adcnum &= 5;
 #endif
 #if defined(ADCSRB) && defined(MUX5)
-			// the MUX5 bit of ADCSRB selects whether we're reading from channels
-			// 0 to 7 (MUX5 low) or 8 to 15 (MUX5 high).
-			ADCSRB = (ADCSRB & ~(1 << MUX5)) | (((adcnum >> 3) & 0x01) << MUX5);
+	// the MUX5 bit of ADCSRB selects whether we're reading from channels
+	// 0 to 7 (MUX5 low) or 8 to 15 (MUX5 high).
+	ADCSRB = (ADCSRB & ~(1 << MUX5)) | (((adcnum >> 3) & 0x01) << MUX5);
 #endif
-			if (adcnum != current_adcnum) {
-				ADMUX = (ADMUX & 0xF0) | adcnum; /* set up mux */
-				current_adcnum = adcnum; /* cache for next time */
-			}
-			ADCSRA |= (1 << ADSC); /* start ADC conversion */
-			while (ADCSRA & (1 << ADSC)) {
-				;
-			} /* block for the result */
-			return ADC;
-		}
+	if (adcnum != current_adcnum) {
+		ADMUX = (ADMUX & 0xF0) | adcnum; /* set up mux */
+		current_adcnum = adcnum; /* cache for next time */
+	}
+	ADCSRA |= (1 << ADSC); /* start ADC conversion */
+	while (ADCSRA & (1 << ADSC)) {
+		;
+	} /* block for the result */
+	return ADC;
+}
 
-		void adc_poweroff_digital_pinbuffer(uint8_t adcnum) {
+void adc_poweroff_digital_pinbuffer(uint8_t adcnum) {
 #if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
-			adcnum &= 15;
+	adcnum &= 15;
 #elif(defined(__AVR_ATmega16__)    || \
 	defined(__AVR_ATmega16A__)     || \
     defined(__AVR_ATmega164P__)    || \
@@ -3380,843 +3401,843 @@ ISR(INT0_vect) {
     defined(__AVR_ATmega644__)     || \
     defined(__AVR_ATmega644P__)    || \
     defined(__AVR_ATmega1284P__))
-			adcnum &= 7;
+	adcnum &= 7;
 #elif defined(__AVR_ATmega48__)    || \
     defined(__AVR_ATmega88__)      || \
     defined(__AVR_ATmega88P__)     || \
     defined(__AVR_ATmega168__)     || \
     defined(__AVR_ATmega168P__)    || \
     defined(__AVR_ATmega328P__)
-			adcnum &= 5;
+	adcnum &= 5;
 #endif
 #if defined(DIDR0)
-			sbi(DIDR0, adcnum);
+	sbi(DIDR0, adcnum);
 #endif
 #if defined(DIDR2)
-			sbi(DIDR2, (adcnum & 7));
+	sbi(DIDR2, (adcnum & 7));
 #endif
-		}
+}
 #endif // ENABLE_ADC
 //--
 #ifdef ENABLE_LCD
-		static void lcd_nibble(uint8_t d);
-		static void lcd_byte(uint8_t d);
+static void lcd_nibble(uint8_t d);
+static void lcd_byte(uint8_t d);
 
-		uint8_t lcd_pos = LCD_LINE1;
-		void lcd_init(void) {
+uint8_t lcd_pos = LCD_LINE1;
+void lcd_init(void) {
 
-			// set LCD DDR pins to 1 for output
-			LCD_D4_DDR |= (1 << LCD_D4_PIN);
-			LCD_D5_DDR |= (1 << LCD_D5_PIN);
-			LCD_D6_DDR |= (1 << LCD_D6_PIN);
-			LCD_D7_DDR |= (1 << LCD_D7_PIN);
-			LCD_E_DDR |= (1 << LCD_E_PIN);
-			LCD_RS_DDR |= (1 << LCD_RS_PIN);
+	// set LCD DDR pins to 1 for output
+	LCD_D4_DDR |= (1 << LCD_D4_PIN);
+	LCD_D5_DDR |= (1 << LCD_D5_PIN);
+	LCD_D6_DDR |= (1 << LCD_D6_PIN);
+	LCD_D7_DDR |= (1 << LCD_D7_PIN);
+	LCD_E_DDR |= (1 << LCD_E_PIN);
+	LCD_RS_DDR |= (1 << LCD_RS_PIN);
 
-			/*// set LCD DDR pins to 1 for output
-			 sbi(LCD_D4_DDR,LCD_D4_PIN);
-			 sbi(LCD_D5_DDR,LCD_D5_PIN);
-			 sbi(LCD_D6_DDR,LCD_D6_PIN);
-			 sbi(LCD_D7_DDR,LCD_D7_PIN);
-			 sbi(LCD_E_DDR,LCD_E_PIN);
-			 */sbi(LCD_RS_DDR, LCD_RS_PIN);
-			/**/
+	/*// set LCD DDR pins to 1 for output
+	 sbi(LCD_D4_DDR,LCD_D4_PIN);
+	 sbi(LCD_D5_DDR,LCD_D5_PIN);
+	 sbi(LCD_D6_DDR,LCD_D6_PIN);
+	 sbi(LCD_D7_DDR,LCD_D7_PIN);
+	 sbi(LCD_E_DDR,LCD_E_PIN);
+	 */sbi(LCD_RS_DDR, LCD_RS_PIN);
+	/**/
 
 // set the E and RS PORT pins to 0
-			LCD_E_PORT &= ~(1 << LCD_E_PIN);
-			LCD_RS_PORT &= ~(1 << LCD_RS_PIN);
+	LCD_E_PORT &= ~(1 << LCD_E_PIN);
+	LCD_RS_PORT &= ~(1 << LCD_RS_PIN);
 
-			/*
-			 // set the E and RS PORT pins to 0
-			 cbi(LCD_E_PORT,LCD_E_PIN);
-			 cbi(LCD_RS_PORT,LCD_RS_PIN);*//**/
+	/*
+	 // set the E and RS PORT pins to 0
+	 cbi(LCD_E_PORT,LCD_E_PIN);
+	 cbi(LCD_RS_PORT,LCD_RS_PIN);*//**/
 
-			_delay_ms(15);
-			lcd_nibble(0x30);
-			_delay_ms(4.1);
-			lcd_nibble(0x30);
-			_delay_us(100);
-			lcd_nibble(0x30);
-			_delay_us(LCD_TIME_DAT);
-			lcd_nibble(0x20);// 4 bit mode
-			_delay_us(LCD_TIME_DAT);
+	_delay_ms(15);
+	lcd_nibble(0x30);
+	_delay_ms(4.1);
+	lcd_nibble(0x30);
+	_delay_us(100);
+	lcd_nibble(0x30);
+	_delay_us(LCD_TIME_DAT);
+	lcd_nibble(0x20);// 4 bit mode
+	_delay_us(LCD_TIME_DAT);
 #if LCD_LINE == 1
-			lcd_command( 0x20 ); // 1 line
+	lcd_command( 0x20 ); // 1 line
 #else
-			lcd_command(0x28); // 2 lines 5*7
+	lcd_command(0x28); // 2 lines 5*7
 #endif
-			lcd_command(0x08); // display off
-			lcd_command(0x01);// display clear
-			lcd_command(0x06);// cursor increment
-			lcd_command(0x0C);// on, no cursor, no blink
+	lcd_command(0x08); // display off
+	lcd_command(0x01);// display clear
+	lcd_command(0x06);// cursor increment
+	lcd_command(0x0C);// on, no cursor, no blink
 
-			// Set initial display conditions
-			_displaycontrol = LCD_DISPLAYON | LCD_CURSOROFF | LCD_BLINKOFF;
+	// Set initial display conditions
+	_displaycontrol = LCD_DISPLAYON | LCD_CURSOROFF | LCD_BLINKOFF;
 
-			// Initialize to default text direction (for romance languages)
-			_displaymode = LCD_ENTRYLEFT | LCD_ENTRYSHIFTDECREMENT;
-			// set the entry mode
-			lcd_command(LCD_ENTRYMODESET | _displaymode);
-		}
+	// Initialize to default text direction (for romance languages)
+	_displaymode = LCD_ENTRYLEFT | LCD_ENTRYSHIFTDECREMENT;
+	// set the entry mode
+	lcd_command(LCD_ENTRYMODESET | _displaymode);
+}
 
-		void lcd_clear() {
-			lcd_command(0x01);
-		}
+void lcd_clear() {
+	lcd_command(0x01);
+}
 
-		void lcd_home() {
-			lcd_set_cursor(0, 0);
-		}
+void lcd_home() {
+	lcd_set_cursor(0, 0);
+}
 
-		void lcd_putchar(uint8_t d) {
-			sbi(LCD_RS_PORT, LCD_RS_PIN);
+void lcd_putchar(uint8_t d) {
+	sbi(LCD_RS_PORT, LCD_RS_PIN);
 
-			lcd_byte(d);
+	lcd_byte(d);
 
-			switch (++lcd_pos) {
-				case LCD_LINE1 + LCD_COLUMN:
+	switch (++lcd_pos) {
+		case LCD_LINE1 + LCD_COLUMN:
 #ifdef LCD_LINE2
-				d = LCD_LINE2;
-				break;
-				case LCD_LINE2 + LCD_COLUMN:
+		d = LCD_LINE2;
+		break;
+		case LCD_LINE2 + LCD_COLUMN:
 #ifdef LCD_LINE3
-				d = LCD_LINE3;
-				break;
-				case LCD_LINE3 + LCD_COLUMN:
+		d = LCD_LINE3;
+		break;
+		case LCD_LINE3 + LCD_COLUMN:
 #ifdef LCD_LINE4
-				d = LCD_LINE4;
-				break;
-				case LCD_LINE4 + LCD_COLUMN:
+		d = LCD_LINE4;
+		break;
+		case LCD_LINE4 + LCD_COLUMN:
 #endif
 #endif
 #endif
-				d = LCD_LINE1;
-				break;
-				default:
-				return;
-			}
-			lcd_command(d);
-		}
+		d = LCD_LINE1;
+		break;
+		default:
+		return;
+	}
+	lcd_command(d);
+}
 
-		void lcd_putstr(int8_t *s) // display string from SRAM
-		{
-			for (int8_t *s1 = s; *s1; s1++) // until zero byte
-			lcd_putchar((int8_t) *s1);
-		}
+void lcd_putstr(int8_t *s) // display string from SRAM
+{
+	for (int8_t *s1 = s; *s1; s1++) // until zero byte
+	lcd_putchar((int8_t) *s1);
+}
 
-		void lcd_putstr_f(int8_t *FlashString) {
-			uint8_t i = 0;
-			// Check for '\0' string terminator or maximum LCD width
-			while (pgm_read_byte(&FlashString[i]) && (i < LCD_COLUMN)) {
-				lcd_putchar(pgm_read_byte(&FlashString[i++]));
-			}
-		}
+void lcd_putstr_f(int8_t *FlashString) {
+	uint8_t i = 0;
+	// Check for '\0' string terminator or maximum LCD width
+	while (pgm_read_byte(&FlashString[i]) && (i < LCD_COLUMN)) {
+		lcd_putchar(pgm_read_byte(&FlashString[i++]));
+	}
+}
 
-		void lcd_putint(int value) {
-			int8_t string[18];
-			itoa(value, (char *) string, 10);
-			lcd_putstr((int8_t *) string);
-		}
+void lcd_putint(int value) {
+	int8_t string[18];
+	itoa(value, (char *) string, 10);
+	lcd_putstr((int8_t *) string);
+}
 
-		void lcd_putU08(uint8_t value) {
-			int8_t s[4];
-			byte2dec(value, s);
-			lcd_putstr(s);
-		}
+void lcd_putU08(uint8_t value) {
+	int8_t s[4];
+	byte2dec(value, s);
+	lcd_putstr(s);
+}
 
-		void lcd_puthexU08(uint8_t value) {
-			int8_t s[3];
-			byte2hex(value, s);
-			lcd_putstr(s);
-		}
+void lcd_puthexU08(uint8_t value) {
+	int8_t s[3];
+	byte2hex(value, s);
+	lcd_putstr(s);
+}
 
-		void lcd_puthexU16(uint16_t value) {
-			int8_t s[5];
-			word2hex(value, s);
-			lcd_putstr(s);
-		}
+void lcd_puthexU16(uint16_t value) {
+	int8_t s[5];
+	word2hex(value, s);
+	lcd_putstr(s);
+}
 
-		void lcd_blank(uint8_t len) // blank n digits
-		{
-			while (len--)
-			lcd_putchar(' ');
-		}
+void lcd_blank(uint8_t len) // blank n digits
+{
+	while (len--)
+	lcd_putchar(' ');
+}
 
-		void lcd_cursor_on(void) {
-			_displaycontrol |= LCD_CURSORON;
-			lcd_command(LCD_DISPLAYCONTROL | _displaycontrol);
-		}
-		void lcd_cursor_off(void) {
-			_displaycontrol &= ~LCD_CURSORON;
-			lcd_command(LCD_DISPLAYCONTROL | _displaycontrol);
-		}
+void lcd_cursor_on(void) {
+	_displaycontrol |= LCD_CURSORON;
+	lcd_command(LCD_DISPLAYCONTROL | _displaycontrol);
+}
+void lcd_cursor_off(void) {
+	_displaycontrol &= ~LCD_CURSORON;
+	lcd_command(LCD_DISPLAYCONTROL | _displaycontrol);
+}
 
-		void lcd_blink_on(void) {
-			_displaycontrol |= LCD_BLINKON;
-			lcd_command(LCD_DISPLAYCONTROL | _displaycontrol);
-		}
+void lcd_blink_on(void) {
+	_displaycontrol |= LCD_BLINKON;
+	lcd_command(LCD_DISPLAYCONTROL | _displaycontrol);
+}
 
-		void lcd_blink_off(void) {
-			_displaycontrol &= ~LCD_BLINKON;
-			lcd_command(LCD_DISPLAYCONTROL | _displaycontrol);
+void lcd_blink_off(void) {
+	_displaycontrol &= ~LCD_BLINKON;
+	lcd_command(LCD_DISPLAYCONTROL | _displaycontrol);
 
-		}
-		void lcd_display_on(void) {
-			_displaycontrol |= LCD_DISPLAYON;
-			lcd_command(LCD_DISPLAYCONTROL | _displaycontrol);
+}
+void lcd_display_on(void) {
+	_displaycontrol |= LCD_DISPLAYON;
+	lcd_command(LCD_DISPLAYCONTROL | _displaycontrol);
 
-		}
-		void lcd_display_off(void) {
-			_displaycontrol &= ~LCD_DISPLAYON;
-			lcd_command(LCD_DISPLAYCONTROL | _displaycontrol);
+}
+void lcd_display_off(void) {
+	_displaycontrol &= ~LCD_DISPLAYON;
+	lcd_command(LCD_DISPLAYCONTROL | _displaycontrol);
 
-		}
+}
 
 // Private functions
-		static void lcd_nibble(uint8_t d) {
+static void lcd_nibble(uint8_t d) {
 
-			cbi(LCD_D7_PORT, LCD_D7_PIN);
-			if (d & 1 << 7)
-			sbi(LCD_D7_PORT, LCD_D7_PIN);
-			cbi(LCD_D6_PORT, LCD_D6_PIN);
-			if (d & 1 << 6)
-			sbi(LCD_D6_PORT, LCD_D6_PIN);
-			cbi(LCD_D5_PORT, LCD_D5_PIN);
-			if (d & 1 << 5)
-			sbi(LCD_D5_PORT, LCD_D5_PIN);
-			cbi(LCD_D4_PORT, LCD_D4_PIN);
-			if (d & 1 << 4)
-			sbi(LCD_D4_PORT, LCD_D4_PIN);
+	cbi(LCD_D7_PORT, LCD_D7_PIN);
+	if (d & 1 << 7)
+	sbi(LCD_D7_PORT, LCD_D7_PIN);
+	cbi(LCD_D6_PORT, LCD_D6_PIN);
+	if (d & 1 << 6)
+	sbi(LCD_D6_PORT, LCD_D6_PIN);
+	cbi(LCD_D5_PORT, LCD_D5_PIN);
+	if (d & 1 << 5)
+	sbi(LCD_D5_PORT, LCD_D5_PIN);
+	cbi(LCD_D4_PORT, LCD_D4_PIN);
+	if (d & 1 << 4)
+	sbi(LCD_D4_PORT, LCD_D4_PIN);
 
-			sbi(LCD_E_PORT, LCD_E_PIN);
-			_delay_us(LCD_TIME_ENA);
-			cbi(LCD_E_PORT, LCD_E_PIN);
-		}
+	sbi(LCD_E_PORT, LCD_E_PIN);
+	_delay_us(LCD_TIME_ENA);
+	cbi(LCD_E_PORT, LCD_E_PIN);
+}
 
-		static void lcd_byte(uint8_t d) {
-			lcd_nibble(d);
-			lcd_nibble(d << 4);
-			_delay_us(LCD_TIME_DAT);
-		}
+static void lcd_byte(uint8_t d) {
+	lcd_nibble(d);
+	lcd_nibble(d << 4);
+	_delay_us(LCD_TIME_DAT);
+}
 
-		void lcd_command(uint8_t d) {
-			cbi(LCD_RS_PORT, LCD_RS_PIN);
-			lcd_byte(d);
-			switch (d) {
-				case 0 ... 3: // on longer commands
-				_delay_us(LCD_TIME_CLR);
-				d = LCD_LINE1;
-				case 0x80 ... 0xFF:// set position
-				lcd_pos = d;
-				//break;
-			}
-		}
+void lcd_command(uint8_t d) {
+	cbi(LCD_RS_PORT, LCD_RS_PIN);
+	lcd_byte(d);
+	switch (d) {
+		case 0 ... 3: // on longer commands
+		_delay_us(LCD_TIME_CLR);
+		d = LCD_LINE1;
+		case 0x80 ... 0xFF:// set position
+		lcd_pos = d;
+		//break;
+	}
+}
 
 #endif //ENABLE_LCD
 #ifdef ENABLE_GLCD
 
-		glcdCoord ks0108Coord;
-		uint8_t ks0108Inverted = 0;
-		ks0108FontCallback ks0108FontRead;
-		uint8_t ks0108FontColor;
-		const uint8_t* ks0108Font;
+glcdCoord ks0108Coord;
+uint8_t ks0108Inverted = 0;
+ks0108FontCallback ks0108FontRead;
+uint8_t ks0108FontColor;
+const uint8_t* ks0108Font;
 
-		void GLCD_DrawLine(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2,
-				uint8_t color) {
-			uint8_t length, i, y, yAlt, xTmp, yTmp;
-			int16_t m;
+void GLCD_DrawLine(uint8_t x1, uint8_t y1, uint8_t x2, uint8_t y2,
+		uint8_t color) {
+	uint8_t length, i, y, yAlt, xTmp, yTmp;
+	int16_t m;
 
-			//
-			// vertical line
-			//
-			if (x1 == x2) {
-				// x1|y1 must be the upper point
-				if (y1 > y2) {
-					yTmp = y1;
-					y1 = y2;
-					y2 = yTmp;
-				}
-				GLCD_DrawVertLine(x1, y1, y2-y1, color);
+	//
+	// vertical line
+	//
+	if (x1 == x2) {
+		// x1|y1 must be the upper point
+		if (y1 > y2) {
+			yTmp = y1;
+			y1 = y2;
+			y2 = yTmp;
+		}
+		GLCD_DrawVertLine(x1, y1, y2-y1, color);
 
-				//
-				// horizontal line
-				//
-			} else if (y1 == y2) {
-				// x1|y1 must be the left point
-				if (x1 > x2) {
-					xTmp = x1;
-					x1 = x2;
-					x2 = xTmp;
-				}
-				GLCD_DrawHoriLine(x1, y1, x2-x1, color);
+		//
+		// horizontal line
+		//
+	} else if (y1 == y2) {
+		// x1|y1 must be the left point
+		if (x1 > x2) {
+			xTmp = x1;
+			x1 = x2;
+			x2 = xTmp;
+		}
+		GLCD_DrawHoriLine(x1, y1, x2-x1, color);
 
-				//
-				// schiefe line :)
-				//
-			} else {
-				// angle >= 45°
-				if ((y2 - y1) >= (x2 - x1) || (y1 - y2) >= (x2 - x1)) {
-					// x1 must be smaller than x2
-					if (x1 > x2) {
-						xTmp = x1;
-						yTmp = y1;
-						x1 = x2;
-						y1 = y2;
-						x2 = xTmp;
-						y2 = yTmp;
-					}
+		//
+		// schiefe line :)
+		//
+	} else {
+		// angle >= 45°
+		if ((y2 - y1) >= (x2 - x1) || (y1 - y2) >= (x2 - x1)) {
+			// x1 must be smaller than x2
+			if (x1 > x2) {
+				xTmp = x1;
+				yTmp = y1;
+				x1 = x2;
+				y1 = y2;
+				x2 = xTmp;
+				y2 = yTmp;
+			}
 
-					length = x2 - x1; // not really the length :)
-					m = ((y2 - y1) * 200) / length;
-					yAlt = y1;
+			length = x2 - x1; // not really the length :)
+			m = ((y2 - y1) * 200) / length;
+			yAlt = y1;
 
-					for (i = 0; i <= length; i++) {
-						y = ((m * i) / 200) + y1;
+			for (i = 0; i <= length; i++) {
+				y = ((m * i) / 200) + y1;
 
-						if ((m * i) % 200 >= 100)
-						y++;
-						else if ((m * i) % 200 <= -100)
-						y--;
+				if ((m * i) % 200 >= 100)
+				y++;
+				else if ((m * i) % 200 <= -100)
+				y--;
 
-						GLCD_DrawLine(x1 + i, yAlt, x1 + i, y, color);
+				GLCD_DrawLine(x1 + i, yAlt, x1 + i, y, color);
 
-						if (length <= (y2 - y1) && y1 < y2)
-						yAlt = y + 1;
-						else if (length <= (y1 - y2) && y1 > y2)
-						yAlt = y - 1;
-						else
-						yAlt = y;
-					}
+				if (length <= (y2 - y1) && y1 < y2)
+				yAlt = y + 1;
+				else if (length <= (y1 - y2) && y1 > y2)
+				yAlt = y - 1;
+				else
+				yAlt = y;
+			}
 
-					// angle < 45°
-				} else {
-					// y1 must be smaller than y2
-					if (y1 > y2) {
-						xTmp = x1;
-						yTmp = y1;
-						x1 = x2;
-						y1 = y2;
-						x2 = xTmp;
-						y2 = yTmp;
-					}
+			// angle < 45°
+		} else {
+			// y1 must be smaller than y2
+			if (y1 > y2) {
+				xTmp = x1;
+				yTmp = y1;
+				x1 = x2;
+				y1 = y2;
+				x2 = xTmp;
+				y2 = yTmp;
+			}
 
-					length = y2 - y1;
-					m = ((x2 - x1) * 200) / length;
-					yAlt = x1;
+			length = y2 - y1;
+			m = ((x2 - x1) * 200) / length;
+			yAlt = x1;
 
-					for (i = 0; i <= length; i++) {
-						y = ((m * i) / 200) + x1;
+			for (i = 0; i <= length; i++) {
+				y = ((m * i) / 200) + x1;
 
-						if ((m * i) % 200 >= 100)
-						y++;
-						else if ((m * i) % 200 <= -100)
-						y--;
+				if ((m * i) % 200 >= 100)
+				y++;
+				else if ((m * i) % 200 <= -100)
+				y--;
 
-						GLCD_DrawLine(yAlt, y1 + i, y, y1 + i, color);
-						if (length <= (x2 - x1) && x1 < x2)
-						yAlt = y + 1;
-						else if (length <= (x1 - x2) && x1 > x2)
-						yAlt = y - 1;
-						else
-						yAlt = y;
-					}
-				}
+				GLCD_DrawLine(yAlt, y1 + i, y, y1 + i, color);
+				if (length <= (x2 - x1) && x1 < x2)
+				yAlt = y + 1;
+				else if (length <= (x1 - x2) && x1 > x2)
+				yAlt = y - 1;
+				else
+				yAlt = y;
 			}
 		}
+	}
+}
 
-		void GLCD_DrawRect(uint8_t x, uint8_t y, uint8_t width, uint8_t height,
-				uint8_t color) {
-			GLCD_DrawHoriLine(x, y, width, color);
-			// top
-			GLCD_DrawHoriLine(x, y+height, width, color);
-			// bottom
-			GLCD_DrawVertLine(x, y, height, color);
-			// left
-			GLCD_DrawVertLine(x+width, y, height, color);
-			// right
+void GLCD_DrawRect(uint8_t x, uint8_t y, uint8_t width, uint8_t height,
+		uint8_t color) {
+	GLCD_DrawHoriLine(x, y, width, color);
+	// top
+	GLCD_DrawHoriLine(x, y+height, width, color);
+	// bottom
+	GLCD_DrawVertLine(x, y, height, color);
+	// left
+	GLCD_DrawVertLine(x+width, y, height, color);
+	// right
+}
+
+void GLCD_DrawRoundRect(uint8_t x, uint8_t y, uint8_t width, uint8_t height,
+		uint8_t radius, uint8_t color) {
+	int16_t tSwitch, x1 = 0, y1 = radius;
+	tSwitch = 3 - 2 * radius;
+
+	while (x1 <= y1) {
+		GLCD_SetDot(x + radius - x1, y + radius - y1, color);
+		GLCD_SetDot(x + radius - y1, y + radius - x1, color);
+
+		GLCD_SetDot(x + width - radius + x1, y + radius - y1, color);
+		GLCD_SetDot(x + width - radius + y1, y + radius - x1, color);
+
+		GLCD_SetDot(x + width - radius + x1, y + height - radius + y1, color);
+		GLCD_SetDot(x + width - radius + y1, y + height - radius + x1, color);
+
+		GLCD_SetDot(x + radius - x1, y + height - radius + y1, color);
+		GLCD_SetDot(x + radius - y1, y + height - radius + x1, color);
+
+		if (tSwitch < 0) {
+			tSwitch += (4 * x1 + 6);
+		} else {
+			tSwitch += (4 * (x1 - y1) + 10);
+			y1--;
+		}
+		x1++;
+	}
+
+	GLCD_DrawHoriLine(x+radius, y, width-(2*radius), color);
+	// top
+	GLCD_DrawHoriLine(x+radius, y+height, width-(2*radius), color);
+	// bottom
+	GLCD_DrawVertLine(x, y+radius, height-(2*radius), color);
+	// left
+	GLCD_DrawVertLine(x+width, y+radius, height-(2*radius), color);
+	// right
+}
+
+/*
+ * Hardware-Functions
+ */
+void GLCD_FillRect(uint8_t x, uint8_t y, uint8_t width, uint8_t height,
+		uint8_t color) {
+	uint8_t mask, pageOffset, h, i, data;
+	height++;
+
+	pageOffset = y % 8;
+	y -= pageOffset;
+	mask = 0xFF;
+	if (height < 8 - pageOffset) {
+		mask >>= (8 - height);
+		h = height;
+	} else {
+		h = 8 - pageOffset;
+	}
+	mask <<= pageOffset;
+
+	GLCD_GotoXY(x, y);
+	for (i = 0; i <= width; i++) {
+		data = GLCD_ReadData();
+
+		if (color == GLCD_BLACK) {
+			data |= mask;
+		} else {
+			data &= ~mask;
 		}
 
-		void GLCD_DrawRoundRect(uint8_t x, uint8_t y, uint8_t width, uint8_t height,
-				uint8_t radius, uint8_t color) {
-			int16_t tSwitch, x1 = 0, y1 = radius;
-			tSwitch = 3 - 2 * radius;
+		GLCD_WriteData(data);
+	}
 
-			while (x1 <= y1) {
-				GLCD_SetDot(x + radius - x1, y + radius - y1, color);
-				GLCD_SetDot(x + radius - y1, y + radius - x1, color);
+	while (h + 8 <= height) {
+		h += 8;
+		y += 8;
+		GLCD_GotoXY(x, y);
 
-				GLCD_SetDot(x + width - radius + x1, y + radius - y1, color);
-				GLCD_SetDot(x + width - radius + y1, y + radius - x1, color);
-
-				GLCD_SetDot(x + width - radius + x1, y + height - radius + y1, color);
-				GLCD_SetDot(x + width - radius + y1, y + height - radius + x1, color);
-
-				GLCD_SetDot(x + radius - x1, y + height - radius + y1, color);
-				GLCD_SetDot(x + radius - y1, y + height - radius + x1, color);
-
-				if (tSwitch < 0) {
-					tSwitch += (4 * x1 + 6);
-				} else {
-					tSwitch += (4 * (x1 - y1) + 10);
-					y1--;
-				}
-				x1++;
-			}
-
-			GLCD_DrawHoriLine(x+radius, y, width-(2*radius), color);
-			// top
-			GLCD_DrawHoriLine(x+radius, y+height, width-(2*radius), color);
-			// bottom
-			GLCD_DrawVertLine(x, y+radius, height-(2*radius), color);
-			// left
-			GLCD_DrawVertLine(x+width, y+radius, height-(2*radius), color);
-			// right
+		for (i = 0; i <= width; i++) {
+			GLCD_WriteData(color);
 		}
+	}
 
-		/*
-		 * Hardware-Functions
-		 */
-		void GLCD_FillRect(uint8_t x, uint8_t y, uint8_t width, uint8_t height,
-				uint8_t color) {
-			uint8_t mask, pageOffset, h, i, data;
-			height++;
+	if (h < height) {
+		mask = ~(0xFF << (height - h));
+		GLCD_GotoXY(x, y + 8);
 
-			pageOffset = y % 8;
-			y -= pageOffset;
-			mask = 0xFF;
-			if (height < 8 - pageOffset) {
-				mask >>= (8 - height);
-				h = height;
-			} else {
-				h = 8 - pageOffset;
-			}
-			mask <<= pageOffset;
-
-			GLCD_GotoXY(x, y);
-			for (i = 0; i <= width; i++) {
-				data = GLCD_ReadData();
-
-				if (color == GLCD_BLACK) {
-					data |= mask;
-				} else {
-					data &= ~mask;
-				}
-
-				GLCD_WriteData(data);
-			}
-
-			while (h + 8 <= height) {
-				h += 8;
-				y += 8;
-				GLCD_GotoXY(x, y);
-
-				for (i = 0; i <= width; i++) {
-					GLCD_WriteData(color);
-				}
-			}
-
-			if (h < height) {
-				mask = ~(0xFF << (height - h));
-				GLCD_GotoXY(x, y + 8);
-
-				for (i = 0; i <= width; i++) {
-					data = GLCD_ReadData();
-
-					if (color == GLCD_BLACK) {
-						data |= mask;
-					} else {
-						data &= ~mask;
-					}
-
-					GLCD_WriteData(data);
-				}
-			}
-		}
-
-		void GLCD_InvertRect(uint8_t x, uint8_t y, uint8_t width, uint8_t height) {
-			uint8_t mask, pageOffset, h, i, data, tmpData;
-			height++;
-
-			pageOffset = y % 8;
-			y -= pageOffset;
-			mask = 0xFF;
-			if (height < 8 - pageOffset) {
-				mask >>= (8 - height);
-				h = height;
-			} else {
-				h = 8 - pageOffset;
-			}
-			mask <<= pageOffset;
-
-			GLCD_GotoXY(x, y);
-			for (i = 0; i <= width; i++) {
-				data = GLCD_ReadData();
-				tmpData = ~data;
-				data = (tmpData & mask) | (data & ~mask);
-				GLCD_WriteData(data);
-			}
-
-			while (h + 8 <= height) {
-				h += 8;
-				y += 8;
-				GLCD_GotoXY(x, y);
-
-				for (i = 0; i <= width; i++) {
-					data = GLCD_ReadData();
-					GLCD_WriteData(~data);
-				}
-			}
-
-			if (h < height) {
-				mask = ~(0xFF << (height - h));
-				GLCD_GotoXY(x, y + 8);
-
-				for (i = 0; i <= width; i++) {
-					data = GLCD_ReadData();
-					tmpData = ~data;
-					data = (tmpData & mask) | (data & ~mask);
-					GLCD_WriteData(data);
-				}
-			}
-		}
-
-		void GLCD_SetInverted(uint8_t invert) {
-			if (ks0108Inverted != invert) {
-				GLCD_InvertRect(0, 0, 127, 63);
-				ks0108Inverted = invert;
-			}
-		}
-
-		void GLCD_SetDot(uint8_t x, uint8_t y, uint8_t color) {
-			uint8_t data;
-
-			GLCD_GotoXY(x, y - y % 8); // read data from display memory
+		for (i = 0; i <= width; i++) {
 			data = GLCD_ReadData();
 
 			if (color == GLCD_BLACK) {
-				data |= 0x01 << (y % 8); // set dot
+				data |= mask;
 			} else {
-				data &= ~(0x01 << (y % 8)); // clear dot
+				data &= ~mask;
 			}
 
-			GLCD_WriteData(data); // write data back to display
+			GLCD_WriteData(data);
 		}
+	}
+}
+
+void GLCD_InvertRect(uint8_t x, uint8_t y, uint8_t width, uint8_t height) {
+	uint8_t mask, pageOffset, h, i, data, tmpData;
+	height++;
+
+	pageOffset = y % 8;
+	y -= pageOffset;
+	mask = 0xFF;
+	if (height < 8 - pageOffset) {
+		mask >>= (8 - height);
+		h = height;
+	} else {
+		h = 8 - pageOffset;
+	}
+	mask <<= pageOffset;
+
+	GLCD_GotoXY(x, y);
+	for (i = 0; i <= width; i++) {
+		data = GLCD_ReadData();
+		tmpData = ~data;
+		data = (tmpData & mask) | (data & ~mask);
+		GLCD_WriteData(data);
+	}
+
+	while (h + 8 <= height) {
+		h += 8;
+		y += 8;
+		GLCD_GotoXY(x, y);
+
+		for (i = 0; i <= width; i++) {
+			data = GLCD_ReadData();
+			GLCD_WriteData(~data);
+		}
+	}
+
+	if (h < height) {
+		mask = ~(0xFF << (height - h));
+		GLCD_GotoXY(x, y + 8);
+
+		for (i = 0; i <= width; i++) {
+			data = GLCD_ReadData();
+			tmpData = ~data;
+			data = (tmpData & mask) | (data & ~mask);
+			GLCD_WriteData(data);
+		}
+	}
+}
+
+void GLCD_SetInverted(uint8_t invert) {
+	if (ks0108Inverted != invert) {
+		GLCD_InvertRect(0, 0, 127, 63);
+		ks0108Inverted = invert;
+	}
+}
+
+void GLCD_SetDot(uint8_t x, uint8_t y, uint8_t color) {
+	uint8_t data;
+
+	GLCD_GotoXY(x, y - y % 8); // read data from display memory
+	data = GLCD_ReadData();
+
+	if (color == GLCD_BLACK) {
+		data |= 0x01 << (y % 8); // set dot
+	} else {
+		data &= ~(0x01 << (y % 8)); // clear dot
+	}
+
+	GLCD_WriteData(data); // write data back to display
+}
 
 //
 // Font Functions
 //
 
-		uint8_t GLCD_ReadFontData(const uint8_t* ptr) {
-			return pgm_read_byte(ptr);
-		}
+uint8_t GLCD_ReadFontData(const uint8_t* ptr) {
+	return pgm_read_byte(ptr);
+}
 
-		void GLCD_SelectFont(const uint8_t* font, ks0108FontCallback callback,
-				uint8_t color) {
-			ks0108Font = font;
-			ks0108FontRead = callback;
-			ks0108FontColor = color;
-		}
+void GLCD_SelectFont(const uint8_t* font, ks0108FontCallback callback,
+		uint8_t color) {
+	ks0108Font = font;
+	ks0108FontRead = callback;
+	ks0108FontColor = color;
+}
 
-		int GLCD_PutChar(char c) {
-			uint8_t width = 0;
-			uint8_t height = ks0108FontRead(ks0108Font + GLCD_FONT_HEIGHT);
-			uint8_t bytes = (height + 7) / 8;
+int GLCD_PutChar(char c) {
+	uint8_t width = 0;
+	uint8_t height = ks0108FontRead(ks0108Font + GLCD_FONT_HEIGHT);
+	uint8_t bytes = (height + 7) / 8;
 
-			uint8_t firstChar = ks0108FontRead(ks0108Font + GLCD_FONT_FIRST_CHAR);
-			uint8_t charCount = ks0108FontRead(ks0108Font + GLCD_FONT_CHAR_COUNT);
+	uint8_t firstChar = ks0108FontRead(ks0108Font + GLCD_FONT_FIRST_CHAR);
+	uint8_t charCount = ks0108FontRead(ks0108Font + GLCD_FONT_CHAR_COUNT);
 
-			uint16_t index = 0;
-			uint8_t x = ks0108Coord.x, y = ks0108Coord.y;
+	uint16_t index = 0;
+	uint8_t x = ks0108Coord.x, y = ks0108Coord.y;
 
-			if (c < firstChar || c >= (firstChar + charCount)) {
-				return 1;
-			}
-			c -= firstChar;
+	if (c < firstChar || c >= (firstChar + charCount)) {
+		return 1;
+	}
+	c -= firstChar;
 
-			// read width data, to get the index
-			for (uint8_t i = 0; i < c; i++) {
-				index += ks0108FontRead(ks0108Font + GLCD_FONT_WIDTH_TABLE + i);
-			}
-			index = index * bytes + charCount + GLCD_FONT_WIDTH_TABLE;
-			width = ks0108FontRead(ks0108Font + GLCD_FONT_WIDTH_TABLE + c);
+	// read width data, to get the index
+	for (uint8_t i = 0; i < c; i++) {
+		index += ks0108FontRead(ks0108Font + GLCD_FONT_WIDTH_TABLE + i);
+	}
+	index = index * bytes + charCount + GLCD_FONT_WIDTH_TABLE;
+	width = ks0108FontRead(ks0108Font + GLCD_FONT_WIDTH_TABLE + c);
 
-			// last but not least, draw the character
-			for (uint8_t i = 0; i < bytes; i++) {
-				uint8_t page = i * width;
-				for (uint8_t j = 0; j < width; j++) {
-					uint8_t data = ks0108FontRead(ks0108Font + index + page + j);
+	// last but not least, draw the character
+	for (uint8_t i = 0; i < bytes; i++) {
+		uint8_t page = i * width;
+		for (uint8_t j = 0; j < width; j++) {
+			uint8_t data = ks0108FontRead(ks0108Font + index + page + j);
 
-					if (height < (i + 1) * 8) {
-						data >>= (i + 1) * 8 - height;
-					}
-
-					if (ks0108FontColor == GLCD_BLACK) {
-						GLCD_WriteData(data);
-					} else {
-						GLCD_WriteData(~data);
-					}
-				}
-				// 1px gap between chars
-				if (ks0108FontColor == GLCD_BLACK) {
-					GLCD_WriteData(0x00);
-				} else {
-					GLCD_WriteData(0xFF);
-				}
-				GLCD_GotoXY(x, ks0108Coord.y + 8);
-			}
-			GLCD_GotoXY(x + width + 1, y);
-
-			return 0;
-		}
-
-		void GLCD_Puts(char* str) {
-			int x = ks0108Coord.x;
-			while (*str != 0) {
-				if (*str == '\n') {
-					GLCD_GotoXY(x,
-							ks0108Coord.y
-							+ ks0108FontRead(ks0108Font + GLCD_FONT_HEIGHT));
-				} else {
-					GLCD_PutChar(*str);
-				}
-				str++;
-			}
-		}
-
-		void GLCD_Puts_P(PGM_P str) {
-			int x = ks0108Coord.x;
-			while (pgm_read_byte(str) != 0) {
-				if (pgm_read_byte(str) == '\n') {
-					GLCD_GotoXY(x,
-							ks0108Coord.y
-							+ ks0108FontRead(ks0108Font + GLCD_FONT_HEIGHT));
-				} else {
-					GLCD_PutChar(pgm_read_byte(str));
-				}
-				str++;
-			}
-		}
-
-		uint8_t GLCD_CharWidth(char c) {
-			uint8_t width = 0;
-			uint8_t firstChar = ks0108FontRead(ks0108Font + GLCD_FONT_FIRST_CHAR);
-			uint8_t charCount = ks0108FontRead(ks0108Font + GLCD_FONT_CHAR_COUNT);
-
-			// read width data
-			if (c >= firstChar && c < (firstChar + charCount)) {
-				c -= firstChar;
-				width = ks0108FontRead(ks0108Font + GLCD_FONT_WIDTH_TABLE + c) + 1;
+			if (height < (i + 1) * 8) {
+				data >>= (i + 1) * 8 - height;
 			}
 
-			return width;
-		}
-
-		uint16_t GLCD_StringWidth(char* str) {
-			uint16_t width = 0;
-
-			while (*str != 0) {
-				width += GLCD_CharWidth(*str++);
+			if (ks0108FontColor == GLCD_BLACK) {
+				GLCD_WriteData(data);
+			} else {
+				GLCD_WriteData(~data);
 			}
-
-			return width;
 		}
-
-		uint16_t GLCD_StringWidth_P(PGM_P str) {
-			uint16_t width = 0;
-
-			while (pgm_read_byte(str) != 0) {
-				width += GLCD_CharWidth(pgm_read_byte(str++));
-			}
-
-			return width;
+		// 1px gap between chars
+		if (ks0108FontColor == GLCD_BLACK) {
+			GLCD_WriteData(0x00);
+		} else {
+			GLCD_WriteData(0xFF);
 		}
+		GLCD_GotoXY(x, ks0108Coord.y + 8);
+	}
+	GLCD_GotoXY(x + width + 1, y);
 
-		void GLCD_GotoXY(uint8_t x, uint8_t y) {
-			uint8_t chip = GLCD_CHIP1, cmd;
+	return 0;
+}
 
-			if (x > 127)
-			x = 0; // ensure that coordinates are legal
-			if (y > 63)
-			y = 0;
-
-			ks0108Coord.x = x;// save new coordinates
-			ks0108Coord.y = y;
-			ks0108Coord.page = y / 8;
-
-			if (x >= 64) { // select the right chip
-				x -= 64;
-				chip = GLCD_CHIP2;
-			}
-			cmd = GLCD_SET_ADD | x;
-			GLCD_WriteCommand(cmd, chip); // set x address on active chip
-
-			cmd = GLCD_SET_PAGE | ks0108Coord.page;// set y address on both chips
-			GLCD_WriteCommand(cmd, GLCD_CHIP1);
-			GLCD_WriteCommand(cmd, GLCD_CHIP2);
+void GLCD_Puts(char* str) {
+	int x = ks0108Coord.x;
+	while (*str != 0) {
+		if (*str == '\n') {
+			GLCD_GotoXY(x,
+					ks0108Coord.y
+					+ ks0108FontRead(ks0108Font + GLCD_FONT_HEIGHT));
+		} else {
+			GLCD_PutChar(*str);
 		}
+		str++;
+	}
+}
 
-		void GLCD_Init(uint8_t invert) {
-			ks0108Coord.x = 0;
-			ks0108Coord.y = 0;
-			ks0108Coord.page = 0;
-
-			ks0108Inverted = invert;
-
-			GLCD_CMD_DIR = 0xFF; // command port is output
-			GLCD_WriteCommand(GLCD_ON, GLCD_CHIP1);// power on
-			GLCD_WriteCommand(GLCD_ON, GLCD_CHIP2);
-
-			GLCD_WriteCommand(GLCD_DISP_START, GLCD_CHIP1);// display start line = 0
-			GLCD_WriteCommand(GLCD_DISP_START, GLCD_CHIP2);
-			GLCD_ClearScreen();// display clear
-			GLCD_GotoXY(0, 0);
+void GLCD_Puts_P(PGM_P str) {
+	int x = ks0108Coord.x;
+	while (pgm_read_byte(str) != 0) {
+		if (pgm_read_byte(str) == '\n') {
+			GLCD_GotoXY(x,
+					ks0108Coord.y
+					+ ks0108FontRead(ks0108Font + GLCD_FONT_HEIGHT));
+		} else {
+			GLCD_PutChar(pgm_read_byte(str));
 		}
+		str++;
+	}
+}
 
-		inline void GLCD_Enable(void) {
-			GLCD_CMD_PORT |= 0x01 << GLCD_EN; // EN high level width: min. 450ns
-			asm volatile("nop\n\t"
-					"nop\n\t"
-					"nop\n\t"
-					::);
-			GLCD_CMD_PORT &= ~(0x01 << GLCD_EN);
-			for (volatile uint8_t i = 0; i < 8; i++)
-			;// a little delay loop (faster than reading the busy flag)
-		}
+uint8_t GLCD_CharWidth(char c) {
+	uint8_t width = 0;
+	uint8_t firstChar = ks0108FontRead(ks0108Font + GLCD_FONT_FIRST_CHAR);
+	uint8_t charCount = ks0108FontRead(ks0108Font + GLCD_FONT_CHAR_COUNT);
 
-		uint8_t GLCD_DoReadData(uint8_t first) {
-			uint8_t data;
-			volatile uint8_t i;
+	// read width data
+	if (c >= firstChar && c < (firstChar + charCount)) {
+		c -= firstChar;
+		width = ks0108FontRead(ks0108Font + GLCD_FONT_WIDTH_TABLE + c) + 1;
+	}
 
-			GLCD_DATA_OUT = 0x00;
-			GLCD_DATA_DIR = 0x00; // data port is input
+	return width;
+}
 
-			if (ks0108Coord.x < 64) {
-				GLCD_CMD_PORT &= ~(0x01 << GLCD_CSEL2); // deselect chip 2
-				GLCD_CMD_PORT |= 0x01 << GLCD_CSEL1;// select chip 1
-			} else if (ks0108Coord.x >= 64) {
-				GLCD_CMD_PORT &= ~(0x01 << GLCD_CSEL1); // deselect chip 1
-				GLCD_CMD_PORT |= 0x01 << GLCD_CSEL2;// select chip 2
-			}
-			if (ks0108Coord.x == 64 && first) { // chip2 X-address = 0
-				GLCD_WriteCommand(GLCD_SET_ADD, GLCD_CHIP2);// wuff wuff
-			}
+uint16_t GLCD_StringWidth(char* str) {
+	uint16_t width = 0;
 
-			GLCD_CMD_PORT |= 0x01 << GLCD_D_I; // D/I = 1
-			GLCD_CMD_PORT |= 0x01 << GLCD_R_W;// R/W = 1
+	while (*str != 0) {
+		width += GLCD_CharWidth(*str++);
+	}
 
-			GLCD_CMD_PORT |= 0x01 << GLCD_EN;// EN high level width: min. 450ns
-			asm volatile("nop\n\t"
-					"nop\n\t"
-					"nop\n\t"
-					::);
+	return width;
+}
 
-			data = GLCD_DATA_IN;// read Data
+uint16_t GLCD_StringWidth_P(PGM_P str) {
+	uint16_t width = 0;
 
-			GLCD_CMD_PORT &= ~(0x01 << GLCD_EN);
-			for (i = 0; i < 8; i++)
-			;// a little delay loop (faster than reading the busy flag)
+	while (pgm_read_byte(str) != 0) {
+		width += GLCD_CharWidth(pgm_read_byte(str++));
+	}
 
-			GLCD_DATA_DIR = 0xFF;
+	return width;
+}
 
-			GLCD_GotoXY(ks0108Coord.x, ks0108Coord.y);
+void GLCD_GotoXY(uint8_t x, uint8_t y) {
+	uint8_t chip = GLCD_CHIP1, cmd;
 
-			if (ks0108Inverted)
-			data = ~data;
-			return data;
-		}
+	if (x > 127)
+	x = 0; // ensure that coordinates are legal
+	if (y > 63)
+	y = 0;
 
-		inline uint8_t GLCD_ReadData(void) {
-			GLCD_DoReadData(1); // dummy read
-			return GLCD_DoReadData(0);// "real" read
-		}
+	ks0108Coord.x = x;// save new coordinates
+	ks0108Coord.y = y;
+	ks0108Coord.page = y / 8;
 
-		void GLCD_WriteCommand(uint8_t cmd, uint8_t chip) {
-			if (chip == GLCD_CHIP1) {
-				GLCD_CMD_PORT &= ~(0x01 << GLCD_CSEL2); // deselect chip 2
-				GLCD_CMD_PORT |= 0x01 << GLCD_CSEL1;// select chip 1
-			} else if (chip == GLCD_CHIP2) {
-				GLCD_CMD_PORT &= ~(0x01 << GLCD_CSEL1); // deselect chip 1
-				GLCD_CMD_PORT |= 0x01 << GLCD_CSEL2;// select chip 2
-			}
+	if (x >= 64) { // select the right chip
+		x -= 64;
+		chip = GLCD_CHIP2;
+	}
+	cmd = GLCD_SET_ADD | x;
+	GLCD_WriteCommand(cmd, chip); // set x address on active chip
 
-			GLCD_CMD_PORT &= ~(0x01 << GLCD_D_I); // D/I = 0
-			GLCD_CMD_PORT &= ~(0x01 << GLCD_R_W);// R/W = 0
-			GLCD_DATA_DIR = 0xFF;// data port is output
-			GLCD_DATA_OUT = cmd;// write command
-			GLCD_Enable();// enable
-			GLCD_DATA_OUT = 0x00;
-		}
+	cmd = GLCD_SET_PAGE | ks0108Coord.page;// set y address on both chips
+	GLCD_WriteCommand(cmd, GLCD_CHIP1);
+	GLCD_WriteCommand(cmd, GLCD_CHIP2);
+}
 
-		void GLCD_WriteData(uint8_t data) {
-			uint8_t displayData, yOffset, cmdPort;
+void GLCD_Init(uint8_t invert) {
+	ks0108Coord.x = 0;
+	ks0108Coord.y = 0;
+	ks0108Coord.page = 0;
+
+	ks0108Inverted = invert;
+
+	GLCD_CMD_DIR = 0xFF; // command port is output
+	GLCD_WriteCommand(GLCD_ON, GLCD_CHIP1);// power on
+	GLCD_WriteCommand(GLCD_ON, GLCD_CHIP2);
+
+	GLCD_WriteCommand(GLCD_DISP_START, GLCD_CHIP1);// display start line = 0
+	GLCD_WriteCommand(GLCD_DISP_START, GLCD_CHIP2);
+	GLCD_ClearScreen();// display clear
+	GLCD_GotoXY(0, 0);
+}
+
+inline void GLCD_Enable(void) {
+	GLCD_CMD_PORT |= 0x01 << GLCD_EN; // EN high level width: min. 450ns
+	asm volatile("nop\n\t"
+			"nop\n\t"
+			"nop\n\t"
+			::);
+	GLCD_CMD_PORT &= ~(0x01 << GLCD_EN);
+	for (volatile uint8_t i = 0; i < 8; i++)
+	;// a little delay loop (faster than reading the busy flag)
+}
+
+uint8_t GLCD_DoReadData(uint8_t first) {
+	uint8_t data;
+	volatile uint8_t i;
+
+	GLCD_DATA_OUT = 0x00;
+	GLCD_DATA_DIR = 0x00; // data port is input
+
+	if (ks0108Coord.x < 64) {
+		GLCD_CMD_PORT &= ~(0x01 << GLCD_CSEL2); // deselect chip 2
+		GLCD_CMD_PORT |= 0x01 << GLCD_CSEL1;// select chip 1
+	} else if (ks0108Coord.x >= 64) {
+		GLCD_CMD_PORT &= ~(0x01 << GLCD_CSEL1); // deselect chip 1
+		GLCD_CMD_PORT |= 0x01 << GLCD_CSEL2;// select chip 2
+	}
+	if (ks0108Coord.x == 64 && first) { // chip2 X-address = 0
+		GLCD_WriteCommand(GLCD_SET_ADD, GLCD_CHIP2);// wuff wuff
+	}
+
+	GLCD_CMD_PORT |= 0x01 << GLCD_D_I; // D/I = 1
+	GLCD_CMD_PORT |= 0x01 << GLCD_R_W;// R/W = 1
+
+	GLCD_CMD_PORT |= 0x01 << GLCD_EN;// EN high level width: min. 450ns
+	asm volatile("nop\n\t"
+			"nop\n\t"
+			"nop\n\t"
+			::);
+
+	data = GLCD_DATA_IN;// read Data
+
+	GLCD_CMD_PORT &= ~(0x01 << GLCD_EN);
+	for (i = 0; i < 8; i++)
+	;// a little delay loop (faster than reading the busy flag)
+
+	GLCD_DATA_DIR = 0xFF;
+
+	GLCD_GotoXY(ks0108Coord.x, ks0108Coord.y);
+
+	if (ks0108Inverted)
+	data = ~data;
+	return data;
+}
+
+inline uint8_t GLCD_ReadData(void) {
+	GLCD_DoReadData(1); // dummy read
+	return GLCD_DoReadData(0);// "real" read
+}
+
+void GLCD_WriteCommand(uint8_t cmd, uint8_t chip) {
+	if (chip == GLCD_CHIP1) {
+		GLCD_CMD_PORT &= ~(0x01 << GLCD_CSEL2); // deselect chip 2
+		GLCD_CMD_PORT |= 0x01 << GLCD_CSEL1;// select chip 1
+	} else if (chip == GLCD_CHIP2) {
+		GLCD_CMD_PORT &= ~(0x01 << GLCD_CSEL1); // deselect chip 1
+		GLCD_CMD_PORT |= 0x01 << GLCD_CSEL2;// select chip 2
+	}
+
+	GLCD_CMD_PORT &= ~(0x01 << GLCD_D_I); // D/I = 0
+	GLCD_CMD_PORT &= ~(0x01 << GLCD_R_W);// R/W = 0
+	GLCD_DATA_DIR = 0xFF;// data port is output
+	GLCD_DATA_OUT = cmd;// write command
+	GLCD_Enable();// enable
+	GLCD_DATA_OUT = 0x00;
+}
+
+void GLCD_WriteData(uint8_t data) {
+	uint8_t displayData, yOffset, cmdPort;
 
 #ifdef DEBUG
-			volatile uint16_t i;
-			for(i=0; i<5000; i++);
+	volatile uint16_t i;
+	for(i=0; i<5000; i++);
 #endif
 
-			if (ks0108Coord.x >= 128)
-			return;
+	if (ks0108Coord.x >= 128)
+	return;
 
-			if (ks0108Coord.x < 64) {
-				GLCD_CMD_PORT &= ~(0x01 << GLCD_CSEL2); // deselect chip 2
-				GLCD_CMD_PORT |= 0x01 << GLCD_CSEL1;// select chip 1
-			} else if (ks0108Coord.x >= 64) {
-				GLCD_CMD_PORT &= ~(0x01 << GLCD_CSEL1); // deselect chip 1
-				GLCD_CMD_PORT |= 0x01 << GLCD_CSEL2;// select chip 2
-			}
-			if (ks0108Coord.x == 64) // chip2 X-address = 0
-			GLCD_WriteCommand(GLCD_SET_ADD, GLCD_CHIP2);
+	if (ks0108Coord.x < 64) {
+		GLCD_CMD_PORT &= ~(0x01 << GLCD_CSEL2); // deselect chip 2
+		GLCD_CMD_PORT |= 0x01 << GLCD_CSEL1;// select chip 1
+	} else if (ks0108Coord.x >= 64) {
+		GLCD_CMD_PORT &= ~(0x01 << GLCD_CSEL1); // deselect chip 1
+		GLCD_CMD_PORT |= 0x01 << GLCD_CSEL2;// select chip 2
+	}
+	if (ks0108Coord.x == 64) // chip2 X-address = 0
+	GLCD_WriteCommand(GLCD_SET_ADD, GLCD_CHIP2);
 
-			GLCD_CMD_PORT |= 0x01 << GLCD_D_I;// D/I = 1
-			GLCD_CMD_PORT &= ~(0x01 << GLCD_R_W);// R/W = 0
-			GLCD_DATA_DIR = 0xFF;// data port is output
+	GLCD_CMD_PORT |= 0x01 << GLCD_D_I;// D/I = 1
+	GLCD_CMD_PORT &= ~(0x01 << GLCD_R_W);// R/W = 0
+	GLCD_DATA_DIR = 0xFF;// data port is output
 
-			yOffset = ks0108Coord.y % 8;
-			if (yOffset != 0) {
-				// first page
-				cmdPort = GLCD_CMD_PORT;// save command port
-				displayData = GLCD_ReadData();
+	yOffset = ks0108Coord.y % 8;
+	if (yOffset != 0) {
+		// first page
+		cmdPort = GLCD_CMD_PORT;// save command port
+		displayData = GLCD_ReadData();
 
-				GLCD_CMD_PORT = cmdPort;// restore command port
-				GLCD_DATA_DIR = 0xFF;// data port is output
+		GLCD_CMD_PORT = cmdPort;// restore command port
+		GLCD_DATA_DIR = 0xFF;// data port is output
 
-				displayData |= data << yOffset;
-				if (ks0108Inverted)
-				displayData = ~displayData;
-				GLCD_DATA_OUT = displayData;// write data
-				GLCD_Enable();// enable
+		displayData |= data << yOffset;
+		if (ks0108Inverted)
+		displayData = ~displayData;
+		GLCD_DATA_OUT = displayData;// write data
+		GLCD_Enable();// enable
 
-				// second page
-				GLCD_GotoXY(ks0108Coord.x, ks0108Coord.y + 8);
+		// second page
+		GLCD_GotoXY(ks0108Coord.x, ks0108Coord.y + 8);
 
-				displayData = GLCD_ReadData();
+		displayData = GLCD_ReadData();
 
-				GLCD_CMD_PORT = cmdPort;// restore command port
-				GLCD_DATA_DIR = 0xFF;// data port is output
+		GLCD_CMD_PORT = cmdPort;// restore command port
+		GLCD_DATA_DIR = 0xFF;// data port is output
 
-				displayData |= data >> (8 - yOffset);
-				if (ks0108Inverted)
-				displayData = ~displayData;
-				GLCD_DATA_OUT = displayData;// write data
-				GLCD_Enable();// enable
+		displayData |= data >> (8 - yOffset);
+		if (ks0108Inverted)
+		displayData = ~displayData;
+		GLCD_DATA_OUT = displayData;// write data
+		GLCD_Enable();// enable
 
-				GLCD_GotoXY(ks0108Coord.x + 1, ks0108Coord.y - 8);
-			} else {
-				if (ks0108Inverted)
-				data = ~data;
-				GLCD_DATA_OUT = data; // write data
-				GLCD_Enable();// enable
-				ks0108Coord.x++;
-			}
-			GLCD_DATA_OUT = 0x00;
-		}
+		GLCD_GotoXY(ks0108Coord.x + 1, ks0108Coord.y - 8);
+	} else {
+		if (ks0108Inverted)
+		data = ~data;
+		GLCD_DATA_OUT = data; // write data
+		GLCD_Enable();// enable
+		ks0108Coord.x++;
+	}
+	GLCD_DATA_OUT = 0x00;
+}
 
 #endif // ENABLE_GLCD
 #ifdef ENABLE_7SEG
 #ifdef SEG_COMMON_ANODE
-		const uint8_t seg_mask = 0xff;
+const uint8_t seg_mask = 0xff;
 #else
-		const uint8_t seg_mask = 0x00;
+const uint8_t seg_mask = 0x00;
 #endif
 
 #ifdef SEG_DP_PORT
@@ -4225,340 +4246,339 @@ ISR(INT0_vect) {
 #define SEG_NR_CHARS 37
 #endif
 
-
-		const uint8_t PROGMEM seg_code[SEG_NR_CHARS]= {
-			// index 0 is character 0
-			SEG_A+SEG_B+SEG_C+SEG_D+SEG_E+SEG_F,
-			// index 1 is character 1
-			SEG_B+SEG_C,
-			// index 2 is character 2
-			SEG_A+SEG_B+SEG_D+SEG_E+SEG_G,
-			// index 3 is character 3
-			SEG_A+SEG_B+SEG_C+SEG_D+SEG_G,
-			// index 4 is character 4
-			SEG_F+SEG_G+SEG_B+SEG_C,
-			// index 5 is character 5
-			SEG_A+SEG_C+SEG_D+SEG_F+SEG_G,
-			// index 6 is character 6
-			SEG_A+SEG_C+SEG_D+SEG_E+SEG_F+SEG_G,
-			// index 7 is character 7
-			SEG_A+SEG_B+SEG_C,
-			// index 8 is character 8
-			SEG_A+SEG_B+SEG_C+SEG_D+SEG_E+SEG_F+SEG_G,
-			// index 9 is character 9
-			SEG_A+SEG_B+SEG_C+SEG_D+SEG_F+SEG_G,
-			// index 10 is character A
-			SEG_A+SEG_B+SEG_C+SEG_E+SEG_F+SEG_G,
-			// index 11 is character b
-			SEG_C+SEG_D+SEG_E+SEG_F+SEG_G,
-			// index 12 is character C
-			SEG_A+SEG_D+SEG_E+SEG_F,
-			// index 13 is character d
-			SEG_B+SEG_C+SEG_D+SEG_E+SEG_G,
-			// index 14 is character E
-			SEG_A+SEG_D+SEG_E+SEG_F+SEG_G,
-			// index 15 is character F
-			SEG_A+SEG_E+SEG_F+SEG_G,
-			// index 16 is character S
-			SEG_A+SEG_F+SEG_G+SEG_C+SEG_D,
-			// index 17 is character c
-			SEG_G+SEG_E+SEG_D,
-			// index 18 is character r
-			SEG_G+SEG_E,
-			// index 19 is character H
-			SEG_F+SEG_E+SEG_G+SEG_B+SEG_C,
-			// index 20 is character i
-			SEG_C,
-			// index 21 is character L
-			SEG_F+SEG_E+SEG_D,
-			// index 22 is character o
-			SEG_G+SEG_C+SEG_D+SEG_E,
-			// index 23 is character P
-			SEG_A+SEG_B+SEG_G+SEG_F+SEG_E,
-			// index 24 is character U
-			SEG_F+SEG_E+SEG_D+SEG_C+SEG_B,
-			// index 25 is character u
-			SEG_E+SEG_D+SEG_C,
-			// index 26 is character h
-			SEG_F+SEG_E+SEG_G+SEG_C,
-			// index 27 is character Y
-			SEG_F+SEG_G+SEG_B+SEG_C+SEG_D,
-			// index 28 is character J
-			SEG_B+SEG_C+SEG_D,
-			// index 29 is character N
-			SEG_E+SEG_F+SEG_A+SEG_B+SEG_C,
-			// index 30 is character n
-			SEG_C+SEG_G+SEG_E,
-			// index 31 is character T
-			SEG_A+SEG_F+SEG_E,
-			// index 32 is character = (equal)
-			SEG_G+SEG_D,
-			// index 33 is character - (minus)
-			SEG_G,
-			// index 34 is character _ (underline)
-			SEG_D,
-			// index 35 is character G
-			SEG_A+SEG_C+SEG_D+SEG_E+SEG_F,
-			// index 36 is character space
-			0
+const uint8_t PROGMEM seg_code[SEG_NR_CHARS]= {
+	// index 0 is character 0
+	SEG_A+SEG_B+SEG_C+SEG_D+SEG_E+SEG_F,
+	// index 1 is character 1
+	SEG_B+SEG_C,
+	// index 2 is character 2
+	SEG_A+SEG_B+SEG_D+SEG_E+SEG_G,
+	// index 3 is character 3
+	SEG_A+SEG_B+SEG_C+SEG_D+SEG_G,
+	// index 4 is character 4
+	SEG_F+SEG_G+SEG_B+SEG_C,
+	// index 5 is character 5
+	SEG_A+SEG_C+SEG_D+SEG_F+SEG_G,
+	// index 6 is character 6
+	SEG_A+SEG_C+SEG_D+SEG_E+SEG_F+SEG_G,
+	// index 7 is character 7
+	SEG_A+SEG_B+SEG_C,
+	// index 8 is character 8
+	SEG_A+SEG_B+SEG_C+SEG_D+SEG_E+SEG_F+SEG_G,
+	// index 9 is character 9
+	SEG_A+SEG_B+SEG_C+SEG_D+SEG_F+SEG_G,
+	// index 10 is character A
+	SEG_A+SEG_B+SEG_C+SEG_E+SEG_F+SEG_G,
+	// index 11 is character b
+	SEG_C+SEG_D+SEG_E+SEG_F+SEG_G,
+	// index 12 is character C
+	SEG_A+SEG_D+SEG_E+SEG_F,
+	// index 13 is character d
+	SEG_B+SEG_C+SEG_D+SEG_E+SEG_G,
+	// index 14 is character E
+	SEG_A+SEG_D+SEG_E+SEG_F+SEG_G,
+	// index 15 is character F
+	SEG_A+SEG_E+SEG_F+SEG_G,
+	// index 16 is character S
+	SEG_A+SEG_F+SEG_G+SEG_C+SEG_D,
+	// index 17 is character c
+	SEG_G+SEG_E+SEG_D,
+	// index 18 is character r
+	SEG_G+SEG_E,
+	// index 19 is character H
+	SEG_F+SEG_E+SEG_G+SEG_B+SEG_C,
+	// index 20 is character i
+	SEG_C,
+	// index 21 is character L
+	SEG_F+SEG_E+SEG_D,
+	// index 22 is character o
+	SEG_G+SEG_C+SEG_D+SEG_E,
+	// index 23 is character P
+	SEG_A+SEG_B+SEG_G+SEG_F+SEG_E,
+	// index 24 is character U
+	SEG_F+SEG_E+SEG_D+SEG_C+SEG_B,
+	// index 25 is character u
+	SEG_E+SEG_D+SEG_C,
+	// index 26 is character h
+	SEG_F+SEG_E+SEG_G+SEG_C,
+	// index 27 is character Y
+	SEG_F+SEG_G+SEG_B+SEG_C+SEG_D,
+	// index 28 is character J
+	SEG_B+SEG_C+SEG_D,
+	// index 29 is character N
+	SEG_E+SEG_F+SEG_A+SEG_B+SEG_C,
+	// index 30 is character n
+	SEG_C+SEG_G+SEG_E,
+	// index 31 is character T
+	SEG_A+SEG_F+SEG_E,
+	// index 32 is character = (equal)
+	SEG_G+SEG_D,
+	// index 33 is character - (minus)
+	SEG_G,
+	// index 34 is character _ (underline)
+	SEG_D,
+	// index 35 is character G
+	SEG_A+SEG_C+SEG_D+SEG_E+SEG_F,
+	// index 36 is character space
+	0
 #ifdef SEG_DP_PORT
-			// index 37 is character DP (dot) only if you enabled it in atmegaclib.h header...
-			// Otherwise, your array ends at index 36.
-			, SEG_DP
+	// index 37 is character DP (dot) only if you enabled it in atmegaclib.h header...
+	// Otherwise, your array ends at index 36.
+	, SEG_DP
 #endif
-		};
-		void seg_init(void) {
+};
+void seg_init(void) {
 #ifdef SEG_DIGITS_8
-			SEG_DIGITS_BUFFER[0] = 36;
-			SEG_DIGITS_BUFFER[1] = 36;
-			SEG_DIGITS_BUFFER[2] = 36;
-			SEG_DIGITS_BUFFER[3] = 36;
-			SEG_DIGITS_BUFFER[4] = 36;
-			SEG_DIGITS_BUFFER[5] = 36;
-			SEG_DIGITS_BUFFER[6] = 36;
-			SEG_DIGITS_BUFFER[7] = 36;
+	SEG_DIGITS_BUFFER[0] = 36;
+	SEG_DIGITS_BUFFER[1] = 36;
+	SEG_DIGITS_BUFFER[2] = 36;
+	SEG_DIGITS_BUFFER[3] = 36;
+	SEG_DIGITS_BUFFER[4] = 36;
+	SEG_DIGITS_BUFFER[5] = 36;
+	SEG_DIGITS_BUFFER[6] = 36;
+	SEG_DIGITS_BUFFER[7] = 36;
 
 #elif  defined(SEG_DIGITS_7)
-			SEG_DIGITS_BUFFER[0] = 36;
-			SEG_DIGITS_BUFFER[1] = 36;
-			SEG_DIGITS_BUFFER[2] = 36;
-			SEG_DIGITS_BUFFER[3] = 36;
-			SEG_DIGITS_BUFFER[4] = 36;
-			SEG_DIGITS_BUFFER[5] = 36;
-			SEG_DIGITS_BUFFER[6] = 36;
+	SEG_DIGITS_BUFFER[0] = 36;
+	SEG_DIGITS_BUFFER[1] = 36;
+	SEG_DIGITS_BUFFER[2] = 36;
+	SEG_DIGITS_BUFFER[3] = 36;
+	SEG_DIGITS_BUFFER[4] = 36;
+	SEG_DIGITS_BUFFER[5] = 36;
+	SEG_DIGITS_BUFFER[6] = 36;
 #elif  defined(SEG_DIGITS_6)
-			SEG_DIGITS_BUFFER[0] = 36;
-			SEG_DIGITS_BUFFER[1] = 36;
-			SEG_DIGITS_BUFFER[2] = 36;
-			SEG_DIGITS_BUFFER[3] = 36;
-			SEG_DIGITS_BUFFER[4] = 36;
-			SEG_DIGITS_BUFFER[5] = 36;
+	SEG_DIGITS_BUFFER[0] = 36;
+	SEG_DIGITS_BUFFER[1] = 36;
+	SEG_DIGITS_BUFFER[2] = 36;
+	SEG_DIGITS_BUFFER[3] = 36;
+	SEG_DIGITS_BUFFER[4] = 36;
+	SEG_DIGITS_BUFFER[5] = 36;
 #elif  defined(SEG_DIGITS_5)
-			SEG_DIGITS_BUFFER[0] = 36;
-			SEG_DIGITS_BUFFER[1] = 36;
-			SEG_DIGITS_BUFFER[2] = 36;
-			SEG_DIGITS_BUFFER[3] = 36;
-			SEG_DIGITS_BUFFER[4] = 36;
+	SEG_DIGITS_BUFFER[0] = 36;
+	SEG_DIGITS_BUFFER[1] = 36;
+	SEG_DIGITS_BUFFER[2] = 36;
+	SEG_DIGITS_BUFFER[3] = 36;
+	SEG_DIGITS_BUFFER[4] = 36;
 #elif  defined(SEG_DIGITS_4)
-			SEG_DIGITS_BUFFER[0] = 36;
-			SEG_DIGITS_BUFFER[1] = 36;
-			SEG_DIGITS_BUFFER[2] = 36;
-			SEG_DIGITS_BUFFER[3] = 36;
+	SEG_DIGITS_BUFFER[0] = 36;
+	SEG_DIGITS_BUFFER[1] = 36;
+	SEG_DIGITS_BUFFER[2] = 36;
+	SEG_DIGITS_BUFFER[3] = 36;
 #elif  defined(SEG_DIGITS_3)
-			SEG_DIGITS_BUFFER[0] = 36;
-			SEG_DIGITS_BUFFER[1] = 36;
-			SEG_DIGITS_BUFFER[2] = 36;
+	SEG_DIGITS_BUFFER[0] = 36;
+	SEG_DIGITS_BUFFER[1] = 36;
+	SEG_DIGITS_BUFFER[2] = 36;
 #elif  defined(SEG_DIGITS_2)
-			SEG_DIGITS_BUFFER[0] = 36;
-			SEG_DIGITS_BUFFER[1] = 36;
+	SEG_DIGITS_BUFFER[0] = 36;
+	SEG_DIGITS_BUFFER[1] = 36;
 #else
-			SEG_DIGITS_BUFFER[0] = 36;
+	SEG_DIGITS_BUFFER[0] = 36;
 #endif
-			// set direction for segment pins
+	// set direction for segment pins
 #ifdef SEG_DP_DDR
-			sbi(SEG_DP_DDR, SEG_DP_PIN);
+	sbi(SEG_DP_DDR, SEG_DP_PIN);
 #endif
-			sbi(SEG_A_DDR, SEG_A_PIN);
-			sbi(SEG_B_DDR, SEG_B_PIN);
-			sbi(SEG_C_DDR, SEG_C_PIN);
-			sbi(SEG_D_DDR, SEG_D_PIN);
-			sbi(SEG_E_DDR, SEG_E_PIN);
-			sbi(SEG_F_DDR, SEG_F_PIN);
-			sbi(SEG_G_DDR, SEG_G_PIN);
+	sbi(SEG_A_DDR, SEG_A_PIN);
+	sbi(SEG_B_DDR, SEG_B_PIN);
+	sbi(SEG_C_DDR, SEG_C_PIN);
+	sbi(SEG_D_DDR, SEG_D_PIN);
+	sbi(SEG_E_DDR, SEG_E_PIN);
+	sbi(SEG_F_DDR, SEG_F_PIN);
+	sbi(SEG_G_DDR, SEG_G_PIN);
 
-			// set direction for common pins
+	// set direction for common pins
 #ifdef SEG_COMM_0_DDR
-			sbi(SEG_COMM_0_DDR, SEG_COMM_0_PIN);
+	sbi(SEG_COMM_0_DDR, SEG_COMM_0_PIN);
 #endif
 #ifdef SEG_COMM_1_DDR
-			sbi(SEG_COMM_1_DDR, SEG_COMM_1_PIN);
+	sbi(SEG_COMM_1_DDR, SEG_COMM_1_PIN);
 #endif
 #ifdef SEG_COMM_2_DDR
-			sbi(SEG_COMM_2_DDR, SEG_COMM_2_PIN);
+	sbi(SEG_COMM_2_DDR, SEG_COMM_2_PIN);
 #endif
 #ifdef SEG_COMM_3_DDR
-			sbi(SEG_COMM_3_DDR, SEG_COMM_3_PIN);
+	sbi(SEG_COMM_3_DDR, SEG_COMM_3_PIN);
 #endif
 #ifdef SEG_COMM_4_DDR
-			sbi(SEG_COMM_4_DDR, SEG_COMM_4_PIN);
+	sbi(SEG_COMM_4_DDR, SEG_COMM_4_PIN);
 #endif
 #ifdef SEG_COMM_5_DDR
-			sbi(SEG_COMM_5_DDR, SEG_COMM_5_PIN);
+	sbi(SEG_COMM_5_DDR, SEG_COMM_5_PIN);
 #endif
 #ifdef SEG_COMM_6_DDR
-			sbi(SEG_COMM_6_DDR, SEG_COMM_6_PIN);
+	sbi(SEG_COMM_6_DDR, SEG_COMM_6_PIN);
 #endif
 #ifdef SEG_COMM_7_DDR
-			sbi(SEG_COMM_7_DDR, SEG_COMM_7_PIN);
+	sbi(SEG_COMM_7_DDR, SEG_COMM_7_PIN);
 #endif
 
-		}
+}
 
-		uint8_t seg_digit_from_array(uint8_t index) {
-			return seg_mask ^ pgm_read_byte(&seg_code[index]);
-		}
+uint8_t seg_digit_from_array(uint8_t index) {
+	return seg_mask ^ pgm_read_byte(&seg_code[index]);
+}
 
-		void seg_nibble(uint8_t segments) {
+void seg_nibble(uint8_t segments) {
 #ifdef SEG_DP_DDR
-			cbi(SEG_DP_PORT, SEG_DP_PIN);
-			if (bit_isset(segments,7))
-			sbi(SEG_DP_PORT, SEG_DP_PIN);
+	cbi(SEG_DP_PORT, SEG_DP_PIN);
+	if (bit_isset(segments,7))
+	sbi(SEG_DP_PORT, SEG_DP_PIN);
 #endif
-			cbi(SEG_G_PORT, SEG_G_PIN);
-			if (bit_isset(segments,6))
-			sbi(SEG_G_PORT, SEG_G_PIN);
-			cbi(SEG_F_PORT, SEG_F_PIN);
-			if (bit_isset(segments,5))
-			sbi(SEG_F_PORT, SEG_F_PIN);
-			cbi(SEG_E_PORT, SEG_E_PIN);
-			if (bit_isset(segments,4))
-			sbi(SEG_E_PORT, SEG_E_PIN);
-			cbi(SEG_D_PORT, SEG_D_PIN);
-			if (bit_isset(segments,3))
-			sbi(SEG_D_PORT, SEG_D_PIN);
-			cbi(SEG_C_PORT, SEG_C_PIN);
-			if (bit_isset(segments,2))
-			sbi(SEG_C_PORT, SEG_C_PIN);
-			cbi(SEG_B_PORT, SEG_B_PIN);
-			if (bit_isset(segments,1))
-			sbi(SEG_B_PORT, SEG_B_PIN);
-			cbi(SEG_A_PORT, SEG_A_PIN);
-			if (bit_isset(segments,0))
-			sbi(SEG_A_PORT, SEG_A_PIN);
-		}
+	cbi(SEG_G_PORT, SEG_G_PIN);
+	if (bit_isset(segments,6))
+	sbi(SEG_G_PORT, SEG_G_PIN);
+	cbi(SEG_F_PORT, SEG_F_PIN);
+	if (bit_isset(segments,5))
+	sbi(SEG_F_PORT, SEG_F_PIN);
+	cbi(SEG_E_PORT, SEG_E_PIN);
+	if (bit_isset(segments,4))
+	sbi(SEG_E_PORT, SEG_E_PIN);
+	cbi(SEG_D_PORT, SEG_D_PIN);
+	if (bit_isset(segments,3))
+	sbi(SEG_D_PORT, SEG_D_PIN);
+	cbi(SEG_C_PORT, SEG_C_PIN);
+	if (bit_isset(segments,2))
+	sbi(SEG_C_PORT, SEG_C_PIN);
+	cbi(SEG_B_PORT, SEG_B_PIN);
+	if (bit_isset(segments,1))
+	sbi(SEG_B_PORT, SEG_B_PIN);
+	cbi(SEG_A_PORT, SEG_A_PIN);
+	if (bit_isset(segments,0))
+	sbi(SEG_A_PORT, SEG_A_PIN);
+}
 
-		void seg_common_select(uint8_t digit) {
+void seg_common_select(uint8_t digit) {
 #ifdef SEG_COMM_7_PORT
-			cbi(SEG_COMM_7_PORT,SEG_COMM_7_PIN);
-			if(bit_isset(digit,7)) sbi(SEG_COMM_7_PORT,SEG_COMM_7_PIN);
+	cbi(SEG_COMM_7_PORT,SEG_COMM_7_PIN);
+	if(bit_isset(digit,7)) sbi(SEG_COMM_7_PORT,SEG_COMM_7_PIN);
 #endif
 #ifdef SEG_COMM_6_PORT
-			cbi(SEG_COMM_6_PORT,SEG_COMM_6_PIN);
-			if(bit_isset(digit,6)) sbi(SEG_COMM_6_PORT,SEG_COMM_6_PIN);
+	cbi(SEG_COMM_6_PORT,SEG_COMM_6_PIN);
+	if(bit_isset(digit,6)) sbi(SEG_COMM_6_PORT,SEG_COMM_6_PIN);
 #endif
 #ifdef SEG_COMM_5_PORT
-			cbi(SEG_COMM_5_PORT,SEG_COMM_5_PIN);
-			if(bit_isset(digit,5)) sbi(SEG_COMM_5_PORT,SEG_COMM_5_PIN);
+	cbi(SEG_COMM_5_PORT,SEG_COMM_5_PIN);
+	if(bit_isset(digit,5)) sbi(SEG_COMM_5_PORT,SEG_COMM_5_PIN);
 #endif
 #ifdef SEG_COMM_4_PORT
-			cbi(SEG_COMM_4_PORT,SEG_COMM_4_PIN);
-			if(bit_isset(digit,4)) sbi(SEG_COMM_4_PORT,SEG_COMM_4_PIN);
+	cbi(SEG_COMM_4_PORT,SEG_COMM_4_PIN);
+	if(bit_isset(digit,4)) sbi(SEG_COMM_4_PORT,SEG_COMM_4_PIN);
 #endif
 #ifdef SEG_COMM_3_PORT
-			cbi(SEG_COMM_3_PORT, SEG_COMM_3_PIN);
-			if (bit_isset(digit,3))
-			sbi(SEG_COMM_3_PORT, SEG_COMM_3_PIN);
+	cbi(SEG_COMM_3_PORT, SEG_COMM_3_PIN);
+	if (bit_isset(digit,3))
+	sbi(SEG_COMM_3_PORT, SEG_COMM_3_PIN);
 #endif
 #ifdef SEG_COMM_2_PORT
-			cbi(SEG_COMM_2_PORT, SEG_COMM_2_PIN);
-			if (bit_isset(digit,2))
-			sbi(SEG_COMM_2_PORT, SEG_COMM_2_PIN);
+	cbi(SEG_COMM_2_PORT, SEG_COMM_2_PIN);
+	if (bit_isset(digit,2))
+	sbi(SEG_COMM_2_PORT, SEG_COMM_2_PIN);
 #endif
 #ifdef SEG_COMM_1_PORT
-			cbi(SEG_COMM_1_PORT, SEG_COMM_1_PIN);
-			if (bit_isset(digit,1))
-			sbi(SEG_COMM_1_PORT, SEG_COMM_1_PIN);
+	cbi(SEG_COMM_1_PORT, SEG_COMM_1_PIN);
+	if (bit_isset(digit,1))
+	sbi(SEG_COMM_1_PORT, SEG_COMM_1_PIN);
 #endif
-			// At least one pin must be set for selecting the digit
-			// (minimum 1 digit, maximum 8 digits)
-			cbi(SEG_COMM_0_PORT, SEG_COMM_0_PIN);
-			if (bit_isset(digit,0))
-			sbi(SEG_COMM_0_PORT, SEG_COMM_0_PIN);
-		}
+	// At least one pin must be set for selecting the digit
+	// (minimum 1 digit, maximum 8 digits)
+	cbi(SEG_COMM_0_PORT, SEG_COMM_0_PIN);
+	if (bit_isset(digit,0))
+	sbi(SEG_COMM_0_PORT, SEG_COMM_0_PIN);
+}
 
 // Usage if common pin is active in 0 logic and you want to select the digit nr.4:
 // seg_select_digit(SELECT_DIGIT_FOUR, 0);
-		void seg_select_digit(MyDigit digit, uint8_t active_logic) {
-			uint8_t digit_mask;
-			if (active_logic == 0)
-			digit_mask = 0xFF;
-			else
-			digit_mask = 0x00;
-			seg_common_select(digit_mask ^ digit);
-		}
+void seg_select_digit(MyDigit digit, uint8_t active_logic) {
+	uint8_t digit_mask;
+	if (active_logic == 0)
+	digit_mask = 0xFF;
+	else
+	digit_mask = 0x00;
+	seg_common_select(digit_mask ^ digit);
+}
 
 #endif
 
 #ifdef ENABLE_I2C_SOFTWARE
-		uint8_t I2C_write(uint8_t b) {
-			uint8_t i;
-			I2C_SDA_WR();
-			for (i = 0; i < 8; i++) {
-				if (b & 0x80)
-				I2C_SDA_H();
-				else
-				I2C_SDA_L();
-				_delay_us(10);
-				I2C_SCL_H();
-				_delay_us(10);
-				I2C_SCL_L();
-				b <<= 1;
-			}
-			I2C_SDA_RD();
-			I2C_SDA_H();
-			_delay_us(10);
-			I2C_SCL_H();
-			_delay_us(10);
-			i = 0xFF;
-			do {
-				if (bit_is_clear(I2C_PORT_I,I2C_SDA))
-				break;
-				_delay_us(10);
-			}while (--i > 0);
-			I2C_SCL_L();
-			_delay_us(10);
-			return (i);
-		}
+uint8_t I2C_write(uint8_t b) {
+	uint8_t i;
+	I2C_SDA_WR();
+	for (i = 0; i < 8; i++) {
+		if (b & 0x80)
+		I2C_SDA_H();
+		else
+		I2C_SDA_L();
+		_delay_us(10);
+		I2C_SCL_H();
+		_delay_us(10);
+		I2C_SCL_L();
+		b <<= 1;
+	}
+	I2C_SDA_RD();
+	I2C_SDA_H();
+	_delay_us(10);
+	I2C_SCL_H();
+	_delay_us(10);
+	i = 0xFF;
+	do {
+		if (bit_is_clear(I2C_PORT_I,I2C_SDA))
+		break;
+		_delay_us(10);
+	}while (--i > 0);
+	I2C_SCL_L();
+	_delay_us(10);
+	return (i);
+}
 
-		uint8_t I2C_read(uint8_t ack) {
-			uint8_t i;
-			uint8_t b = 0;
-			I2C_SDA_RD();
-			I2C_SDA_H();
-			_delay_us(10);
-			for (i = 0; i < 8; i++) {
-				I2C_SCL_H();
-				_delay_us(10);
-				b <<= 1;
-				if (bit_is_set(I2C_PORT_I,I2C_SDA))
-				b |= 1;
-				I2C_SCL_L();
-				_delay_us(10);
-			}
-			I2C_SDA_WR();
-			if (ack == 0)
-			I2C_SDA_L();
-			else
-			I2C_SDA_H();
-			_delay_us(10);
-			I2C_SCL_H();
-			_delay_us(10);
-			I2C_SCL_L();
-			_delay_us(10);
-			I2C_SDA_L();
-			_delay_us(10);
-			return (b);
-		}
+uint8_t I2C_read(uint8_t ack) {
+	uint8_t i;
+	uint8_t b = 0;
+	I2C_SDA_RD();
+	I2C_SDA_H();
+	_delay_us(10);
+	for (i = 0; i < 8; i++) {
+		I2C_SCL_H();
+		_delay_us(10);
+		b <<= 1;
+		if (bit_is_set(I2C_PORT_I,I2C_SDA))
+		b |= 1;
+		I2C_SCL_L();
+		_delay_us(10);
+	}
+	I2C_SDA_WR();
+	if (ack == 0)
+	I2C_SDA_L();
+	else
+	I2C_SDA_H();
+	_delay_us(10);
+	I2C_SCL_H();
+	_delay_us(10);
+	I2C_SCL_L();
+	_delay_us(10);
+	I2C_SDA_L();
+	_delay_us(10);
+	return (b);
+}
 
-		void I2C_start(void) {
-			I2C_SCL_H();
-			I2C_SDA_H();
-			I2C_SDA_WR();
-			I2C_SCL_WR();
-			_delay_us(10);
-			I2C_SDA_L();
-			_delay_us(10);
-			I2C_SCL_L();
-			_delay_us(10);
-		}
+void I2C_start(void) {
+	I2C_SCL_H();
+	I2C_SDA_H();
+	I2C_SDA_WR();
+	I2C_SCL_WR();
+	_delay_us(10);
+	I2C_SDA_L();
+	_delay_us(10);
+	I2C_SCL_L();
+	_delay_us(10);
+}
 
-		void I2C_stop(void) {
-			I2C_SDA_WR(); // SDA na zapis
-			I2C_SCL_H();
-			_delay_us(10);
-			I2C_SDA_H();
-			_delay_us(10);
-		}
+void I2C_stop(void) {
+	I2C_SDA_WR(); // SDA na zapis
+	I2C_SCL_H();
+	_delay_us(10);
+	I2C_SDA_H();
+	_delay_us(10);
+}
 #endif // end I2C software
 #ifdef ENABLE_TWI
 
@@ -4576,326 +4596,326 @@ ISR(INT0_vect) {
 
 #define  TWI_ERROR_CODE   0x7e
 
-		void TWI_init(void) {
-			TWCR = 0x00; //disable twi
+void TWI_init(void) {
+	TWCR = 0x00; //disable twi
 #if defined(TWPS0)
-			TWSR = 0;
+	TWSR = 0;
 #endif
-			TWBR = (F_CPU / TWI_FREQ - 16) / 2;
+	TWBR = (F_CPU / TWI_FREQ - 16) / 2;
 
-			// enable twi module, acks, and twi interrupt
-			//TWCR = _BV(TWEN) | _BV(TWIE) | _BV(TWEA);
-		}
+	// enable twi module, acks, and twi interrupt
+	//TWCR = _BV(TWEN) | _BV(TWIE) | _BV(TWEA);
+}
 
 //*************************************************
 //Function to start i2c communication
 //*************************************************
-		uint8_t TWI_start(void) {
-			TWCR = (1 << TWINT) | (1 << TWSTA) | (1 << TWEN); //Send START condition
-			//Wait for TWINT flag set. This indicates that the
-			//  START condition has been transmitted
-			while (!(TWCR & (1 << TWINT)))
-			;
-			//Check value of TWI Status Register
-			if ((TWSR & 0xF8) == TWI_START)
-			return (0);
-			else
-			return (1);
-		}
+uint8_t TWI_start(void) {
+	TWCR = (1 << TWINT) | (1 << TWSTA) | (1 << TWEN); //Send START condition
+	//Wait for TWINT flag set. This indicates that the
+	//  START condition has been transmitted
+	while (!(TWCR & (1 << TWINT)))
+		;
+	//Check value of TWI Status Register
+	if ((TWSR & 0xF8) == TWI_START)
+		return (0);
+	else
+		return (1);
+}
 
 //*************************************************
 //Function for repeat start condition
 //*************************************************
-		uint8_t TWI_repeatStart(void) {
-			TWCR = (1 << TWINT) | (1 << TWSTA) | (1 << TWEN); //Send START condition
-			//Wait for TWINT flag set. This indicates that the
-			while (!(TWCR & (1 << TWINT)))
-			;
-			//START condition has been transmitted
-			//Check value of TWI Status Register
-			if ((TWSR & 0xF8) == TWI_REP_START)
-			return (0);
-			else
-			return (1);
-		}
+uint8_t TWI_repeatStart(void) {
+	TWCR = (1 << TWINT) | (1 << TWSTA) | (1 << TWEN); //Send START condition
+	//Wait for TWINT flag set. This indicates that the
+	while (!(TWCR & (1 << TWINT)))
+		;
+	//START condition has been transmitted
+	//Check value of TWI Status Register
+	if ((TWSR & 0xF8) == TWI_REP_START)
+		return (0);
+	else
+		return (1);
+}
 
 //**************************************************
 //Function to transmit address of the slave
 //*************************************************
-		uint8_t TWI_sendAddress(uint8_t address) {
-			uint8_t STATUS;
+uint8_t TWI_sendAddress(uint8_t address) {
+	uint8_t STATUS;
 
-			if ((address & 0x01) == 0)
-			STATUS = TWI_MT_SLA_ACK;
-			else
-			STATUS = TWI_MR_SLA_ACK;
+	if ((address & 0x01) == 0)
+		STATUS = TWI_MT_SLA_ACK;
+	else
+		STATUS = TWI_MR_SLA_ACK;
 
-			TWDR = address;
-			//Load SLA_W into TWDR Register. Clear TWINT bit
-			//in TWCR to start transmission of address
-			TWCR = (1 << TWINT) | (1 << TWEN);
-			//Wait for TWINT flag set. This indicates that the SLA+W has been transmitted,
-			// and ACK/NACK has been received.
-			while (!(TWCR & (1 << TWINT)))
-			;
-			//Check value of TWI Status Register
-			if ((TWSR & 0xF8) == STATUS)
-			return (0);
-			else
-			return (1);
-		}
+	TWDR = address;
+	//Load SLA_W into TWDR Register. Clear TWINT bit
+	//in TWCR to start transmission of address
+	TWCR = (1 << TWINT) | (1 << TWEN);
+	//Wait for TWINT flag set. This indicates that the SLA+W has been transmitted,
+	// and ACK/NACK has been received.
+	while (!(TWCR & (1 << TWINT)))
+		;
+	//Check value of TWI Status Register
+	if ((TWSR & 0xF8) == STATUS)
+		return (0);
+	else
+		return (1);
+}
 
 //**************************************************
 //Function to transmit a data byte
 //*************************************************
-		uint8_t TWI_sendData(uint8_t data) {
-			TWDR = data;
-			//Load SLA_W into TWDR Register. Clear TWINT bit
-			//in TWCR to start transmission of data
-			TWCR = (1 << TWINT) | (1 << TWEN);
-			//Wait for TWINT flag set. This indicates that the data has been
-			// transmitted, and ACK/NACK has been received.
-			while (!(TWCR & (1 << TWINT)))
-			;
-			//Check value of TWI Status Register
-			if ((TWSR & 0xF8) != TWI_MT_DATA_ACK)
-			return (1);
-			else
-			return (0);
-		}
+uint8_t TWI_sendData(uint8_t data) {
+	TWDR = data;
+	//Load SLA_W into TWDR Register. Clear TWINT bit
+	//in TWCR to start transmission of data
+	TWCR = (1 << TWINT) | (1 << TWEN);
+	//Wait for TWINT flag set. This indicates that the data has been
+	// transmitted, and ACK/NACK has been received.
+	while (!(TWCR & (1 << TWINT)))
+		;
+	//Check value of TWI Status Register
+	if ((TWSR & 0xF8) != TWI_MT_DATA_ACK)
+		return (1);
+	else
+		return (0);
+}
 
 //*****************************************************
 //Function to receive a data byte and send ACKnowledge
 //*****************************************************
-		uint8_t TWI_receiveData_ACK(void) {
-			uint8_t data;
+uint8_t TWI_receiveData_ACK(void) {
+	uint8_t data;
 
-			TWCR = (1 << TWEA) | (1 << TWINT) | (1 << TWEN);
-			//Wait for TWINT flag set. This indicates that the data has been received
-			while (!(TWCR & (1 << TWINT)))
-			;
-			//Check value of TWI Status Register
-			if ((TWSR & 0xF8) != TWI_MR_DATA_ACK)
-			return (TWI_ERROR_CODE);
-			data = TWDR;
-			return (data);
-		}
+	TWCR = (1 << TWEA) | (1 << TWINT) | (1 << TWEN);
+	//Wait for TWINT flag set. This indicates that the data has been received
+	while (!(TWCR & (1 << TWINT)))
+		;
+	//Check value of TWI Status Register
+	if ((TWSR & 0xF8) != TWI_MR_DATA_ACK)
+		return (TWI_ERROR_CODE);
+	data = TWDR;
+	return (data);
+}
 
 //******************************************************************
 //Function to receive the last data byte (no acknowledge from master
 //******************************************************************
-		uint8_t TWI_receiveData_NACK(void) {
-			uint8_t data;
+uint8_t TWI_receiveData_NACK(void) {
+	uint8_t data;
 
-			TWCR = (1 << TWINT) | (1 << TWEN);
-			//Wait for TWINT flag set. This indicates that the data has been received
-			while (!(TWCR & (1 << TWINT)))
-			;
-			//Check value of TWI Status Register
-			if ((TWSR & 0xF8) != TWI_MR_DATA_NACK)
-			return (TWI_ERROR_CODE);
-			data = TWDR;
-			return (data);
-		}
+	TWCR = (1 << TWINT) | (1 << TWEN);
+	//Wait for TWINT flag set. This indicates that the data has been received
+	while (!(TWCR & (1 << TWINT)))
+		;
+	//Check value of TWI Status Register
+	if ((TWSR & 0xF8) != TWI_MR_DATA_NACK)
+		return (TWI_ERROR_CODE);
+	data = TWDR;
+	return (data);
+}
 
 //**************************************************
 //Function to end the i2c communication
 //*************************************************
-		void TWI_stop(void) {
-			TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWSTO); //Transmit STOP condition
-		}
+void TWI_stop(void) {
+	TWCR = (1 << TWINT) | (1 << TWEN) | (1 << TWSTO); //Transmit STOP condition
+}
 #endif // ENABLE_TWI
 #ifdef ENABLE_PCF8583
-		uint8_t PCF8583_read(uint8_t address) {
+uint8_t PCF8583_read(uint8_t address) {
 #if defined(PCF8583_USE_TWI)
-			uint8_t error, a, b;
-			//a=(PCF8583_A0<<1)|0xa0;
-			b = PCF8583_A0;
-			a = (b << 1) | Physical_Address;
-			error = TWI_start();
-			error = TWI_sendAddress(a);
-			error = TWI_sendData(address);
-			error = TWI_repeatStart();
-			error = TWI_sendAddress(a|1);
-			a = TWI_receiveData_NACK();
-			TWI_stop();
-			return a;
+	uint8_t error, a, b;
+	//a=(PCF8583_A0<<1)|0xa0;
+	b = PCF8583_A0;
+	a = (b << 1) | Physical_Address;
+	error = TWI_start();
+	error = TWI_sendAddress(a);
+	error = TWI_sendData(address);
+	error = TWI_repeatStart();
+	error = TWI_sendAddress(a | 1);
+	a = TWI_receiveData_NACK();
+	TWI_stop();
+	return a;
 #else // use I2C Software
-			uint8_t a, b;
-			//a=(PCF8583_A0<<1)|0xa0;
-			b = PCF8583_A0;
-			a = (b << 1) | Physical_Address;
-			I2C_start();
-			I2C_write(a);
-			I2C_write(address);
-			I2C_start();
-			I2C_write(a | 1);
-			a = I2C_read(1);
-			I2C_stop();
-			return a;
+	uint8_t a, b;
+	//a=(PCF8583_A0<<1)|0xa0;
+	b = PCF8583_A0;
+	a = (b << 1) | Physical_Address;
+	I2C_start();
+	I2C_write(a);
+	I2C_write(address);
+	I2C_start();
+	I2C_write(a | 1);
+	a = I2C_read(1);
+	I2C_stop();
+	return a;
 #endif
-		}
+}
 
-		void PCF8583_write(uint8_t address, uint8_t data) {
+void PCF8583_write(uint8_t address, uint8_t data) {
 #if defined(PCF8583_USE_TWI)
-			uint8_t a, b, error;
-			b = PCF8583_A0;
-			a = (b << 1) | Physical_Address;
-			error = TWI_start();
-			error = TWI_sendAddress(a);
-			error = TWI_sendData(address);
-			error = TWI_sendData(data);
-			TWI_stop();
+	uint8_t a, b, error;
+	b = PCF8583_A0;
+	a = (b << 1) | Physical_Address;
+	error = TWI_start();
+	error = TWI_sendAddress(a);
+	error = TWI_sendData(address);
+	error = TWI_sendData(data);
+	TWI_stop();
 #else // use I2C Software
-			uint8_t a, b;
-			b = PCF8583_A0;
-			a = (b << 1) | Physical_Address;
-			I2C_start();
-			I2C_write(a);
-			I2C_write(address);
-			I2C_write(data);
-			I2C_stop();
+	uint8_t a, b;
+	b = PCF8583_A0;
+	a = (b << 1) | Physical_Address;
+	I2C_start();
+	I2C_write(a);
+	I2C_write(address);
+	I2C_write(data);
+	I2C_stop();
 #endif
-		}
+}
 
-		uint8_t PCF8583_read_bcd(uint8_t address) {
-			return bcd2bin(PCF8583_read(address));
-		}
+uint8_t PCF8583_read_bcd(uint8_t address) {
+	return bcd2bin(PCF8583_read(address));
+}
 
-		void PCF8583_write_bcd(uint8_t address, uint8_t data) {
-			PCF8583_write(address, bin2bcd(data));
-		}
+void PCF8583_write_bcd(uint8_t address, uint8_t data) {
+	PCF8583_write(address, bin2bcd(data));
+}
 
-		volatile uint8_t PCF8583_status;
-		volatile uint8_t PCF8583_alarm;
+volatile uint8_t PCF8583_status;
+volatile uint8_t PCF8583_alarm;
 
-		uint8_t PCF8583_get_status(void) {
-			PCF8583_status = PCF8583_read(0);
-			PCF8583_alarm = (PCF8583_status & 2);
-			return PCF8583_status;
-		}
+uint8_t PCF8583_get_status(void) {
+	PCF8583_status = PCF8583_read(0);
+	PCF8583_alarm = (PCF8583_status & 2);
+	return PCF8583_status;
+}
 
-		void PCF8583_init(void) {
-			PCF8583_status = 0;
-			PCF8583_alarm = 0;
-			PCF8583_write(0, 0);
-			PCF8583_write(4, PCF8583_read(4) & 0x3f);
-			PCF8583_write(8, 0x90);
-		}
+void PCF8583_init(void) {
+	PCF8583_status = 0;
+	PCF8583_alarm = 0;
+	PCF8583_write(0, 0);
+	PCF8583_write(4, PCF8583_read(4) & 0x3f);
+	PCF8583_write(8, 0x90);
+}
 
-		void PCF8583_stop(void) {
-			PCF8583_get_status();
-			PCF8583_status |= 0x80;
-			PCF8583_write(0, PCF8583_status);
-		}
+void PCF8583_stop(void) {
+	PCF8583_get_status();
+	PCF8583_status |= 0x80;
+	PCF8583_write(0, PCF8583_status);
+}
 
-		void PCF8583_start(void) {
-			PCF8583_get_status();
-			PCF8583_status &= 0x7f;
-			PCF8583_write(0, PCF8583_status);
-		}
+void PCF8583_start(void) {
+	PCF8583_get_status();
+	PCF8583_status &= 0x7f;
+	PCF8583_write(0, PCF8583_status);
+}
 
-		void PCF8583_hold_off(void) {
-			PCF8583_get_status();
-			PCF8583_status &= 0xbf;
-			PCF8583_write(0, PCF8583_status);
-		}
+void PCF8583_hold_off(void) {
+	PCF8583_get_status();
+	PCF8583_status &= 0xbf;
+	PCF8583_write(0, PCF8583_status);
+}
 
-		void PCF8583_hold_on(void) {
-			PCF8583_get_status();
-			PCF8583_status |= 0x40;
-			PCF8583_write(0, PCF8583_status);
-		}
+void PCF8583_hold_on(void) {
+	PCF8583_get_status();
+	PCF8583_status |= 0x40;
+	PCF8583_write(0, PCF8583_status);
+}
 
-		void PCF8583_alarm_off(void) {
-			PCF8583_get_status();
-			PCF8583_status &= 0xfb;
-			PCF8583_write(0, PCF8583_status);
-		}
+void PCF8583_alarm_off(void) {
+	PCF8583_get_status();
+	PCF8583_status &= 0xfb;
+	PCF8583_write(0, PCF8583_status);
+}
 
-		void PCF8583_alarm_on(void) {
-			PCF8583_get_status();
-			PCF8583_status |= 4;
-			PCF8583_write(0, PCF8583_status);
-		}
+void PCF8583_alarm_on(void) {
+	PCF8583_get_status();
+	PCF8583_status |= 4;
+	PCF8583_write(0, PCF8583_status);
+}
 
-		void PCF8583_write_word(uint8_t address, uint16_t data) {
-			PCF8583_write(address, (uint8_t) data & 0xff);
-			PCF8583_write(++address, (uint8_t) (data >> 8));
-		}
+void PCF8583_write_word(uint8_t address, uint16_t data) {
+	PCF8583_write(address, (uint8_t) data & 0xff);
+	PCF8583_write(++address, (uint8_t) (data >> 8));
+}
 
-		void PCF8583_write_date(uint8_t address, uint8_t day, uint16_t year) {
-			PCF8583_write(address, bin2bcd(day) | (((uint8_t) year & 3) << 6));
-		}
+void PCF8583_write_date(uint8_t address, uint8_t day, uint16_t year) {
+	PCF8583_write(address, bin2bcd(day) | (((uint8_t) year & 3) << 6));
+}
 
-		void PCF8583_get_time(uint8_t *hour, uint8_t *min, uint8_t *sec, uint8_t *hsec) {
-			PCF8583_hold_on();
-			*hsec = PCF8583_read_bcd(1);
-			*sec = PCF8583_read_bcd(2);
-			*min = PCF8583_read_bcd(3);
-			*hour = PCF8583_read_bcd(4);
-			PCF8583_hold_off();
-		}
+void PCF8583_get_time(uint8_t *hour, uint8_t *min, uint8_t *sec, uint8_t *hsec) {
+	PCF8583_hold_on();
+	*hsec = PCF8583_read_bcd(1);
+	*sec = PCF8583_read_bcd(2);
+	*min = PCF8583_read_bcd(3);
+	*hour = PCF8583_read_bcd(4);
+	PCF8583_hold_off();
+}
 
-		void PCF8583_set_time(uint8_t hour, uint8_t min, uint8_t sec, uint8_t hsec) {
+void PCF8583_set_time(uint8_t hour, uint8_t min, uint8_t sec, uint8_t hsec) {
 //  if (hour>23) hour=0;
 //  if (min>59) min=0;
 //  if (sec>59) sec=0;
 //  if (hsec>100) hsec=0;
-			PCF8583_stop();
-			PCF8583_write_bcd(1, hsec);
-			PCF8583_write_bcd(2, sec);
-			PCF8583_write_bcd(3, min);
-			PCF8583_write_bcd(4, hour);
-			PCF8583_start();
-		}
+	PCF8583_stop();
+	PCF8583_write_bcd(1, hsec);
+	PCF8583_write_bcd(2, sec);
+	PCF8583_write_bcd(3, min);
+	PCF8583_write_bcd(4, hour);
+	PCF8583_start();
+}
 
-		void PCF8583_get_date(uint8_t *day, uint8_t *month, uint16_t *year) {
-			uint8_t dy;
-			uint16_t y1;
-			PCF8583_hold_on();
-			dy = PCF8583_read(5);
-			*month = bcd2bin(PCF8583_read(6) & 0x1f);
-			PCF8583_hold_off();
-			*day = bcd2bin(dy & 0x3f);
-			dy >>= 6;
-			y1 = PCF8583_read(16) | ((uint16_t) PCF8583_read(17) << 8);
-			if (((uint8_t) y1 & 3) != dy)
-			PCF8583_write_word(16, ++y1);
-			*year = y1;
-		}
+void PCF8583_get_date(uint8_t *day, uint8_t *month, uint16_t *year) {
+	uint8_t dy;
+	uint16_t y1;
+	PCF8583_hold_on();
+	dy = PCF8583_read(5);
+	*month = bcd2bin(PCF8583_read(6) & 0x1f);
+	PCF8583_hold_off();
+	*day = bcd2bin(dy & 0x3f);
+	dy >>= 6;
+	y1 = PCF8583_read(16) | ((uint16_t) PCF8583_read(17) << 8);
+	if (((uint8_t) y1 & 3) != dy)
+		PCF8583_write_word(16, ++y1);
+	*year = y1;
+}
 
-		void PCF8583_set_date(uint8_t day, uint8_t month, uint16_t year) {
-			PCF8583_write_word(16, year);
-			PCF8583_stop();
-			PCF8583_write_date(5, day, year);
-			PCF8583_write_bcd(6, month);
-			PCF8583_start();
-		}
+void PCF8583_set_date(uint8_t day, uint8_t month, uint16_t year) {
+	PCF8583_write_word(16, year);
+	PCF8583_stop();
+	PCF8583_write_date(5, day, year);
+	PCF8583_write_bcd(6, month);
+	PCF8583_start();
+}
 
-		void PCF8583_get_alarm_time(uint8_t *hour, uint8_t *min, uint8_t *sec,
-				uint8_t *hsec) {
-			*hsec = PCF8583_read_bcd(0x9);
-			*sec = PCF8583_read_bcd(0xa);
-			*min = PCF8583_read_bcd(0xb);
-			*hour = PCF8583_read_bcd(0xc);
-		}
+void PCF8583_get_alarm_time(uint8_t *hour, uint8_t *min, uint8_t *sec,
+		uint8_t *hsec) {
+	*hsec = PCF8583_read_bcd(0x9);
+	*sec = PCF8583_read_bcd(0xa);
+	*min = PCF8583_read_bcd(0xb);
+	*hour = PCF8583_read_bcd(0xc);
+}
 
-		void PCF8583_set_alarm_time(uint8_t hour, uint8_t min, uint8_t sec,
-				uint8_t hsec) {
-			PCF8583_write_bcd(0x9, hsec);
-			PCF8583_write_bcd(0xa, sec);
-			PCF8583_write_bcd(0xb, min);
-			PCF8583_write_bcd(0xc, hour);
-		}
+void PCF8583_set_alarm_time(uint8_t hour, uint8_t min, uint8_t sec,
+		uint8_t hsec) {
+	PCF8583_write_bcd(0x9, hsec);
+	PCF8583_write_bcd(0xa, sec);
+	PCF8583_write_bcd(0xb, min);
+	PCF8583_write_bcd(0xc, hour);
+}
 
-		void PCF8583_get_alarm_date(uint8_t *day, uint8_t *month) {
-			*day = bcd2bin(PCF8583_read(0xd) & 0x3f);
-			*month = bcd2bin(PCF8583_read(0xe) & 0x1f);
-		}
+void PCF8583_get_alarm_date(uint8_t *day, uint8_t *month) {
+	*day = bcd2bin(PCF8583_read(0xd) & 0x3f);
+	*month = bcd2bin(PCF8583_read(0xe) & 0x1f);
+}
 
-		void PCF8583_set_alarm_date(uint8_t day, uint8_t month) {
-			PCF8583_write_date(0xd, day, 0);
-			PCF8583_write_bcd(0xe, month);
-		}
+void PCF8583_set_alarm_date(uint8_t day, uint8_t month) {
+	PCF8583_write_date(0xd, day, 0);
+	PCF8583_write_bcd(0xe, month);
+}
 #endif //ENABLE_PCF8583
