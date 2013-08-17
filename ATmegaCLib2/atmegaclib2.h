@@ -56,9 +56,9 @@
 // *****************************************************************************
 // Enabling/disabling additional functionality
 // *****************************************************************************
-//#define UART_BAUD_RATE     57600 // default is 57600
-//#define UART_BAUD_SELECT   (F_CPU / (UART_BAUD_RATE * 16L) - 1) //- don't touch
-//#define ENABLE_SERIAL // Interrupt based, require CONVERSION, conflicts with SERIAL_POLL
+#define UART_BAUD_RATE     57600 // default is 57600
+#define UART_BAUD_SELECT   (F_CPU / (UART_BAUD_RATE * 16L) - 1) //- don't touch
+#define ENABLE_SERIAL // Interrupt based, require CONVERSION, conflicts with SERIAL_POLL
 //#define ENABLE_SERIAL_POLL // require CONVERSION, conflicts with SERIAL
 //#define ENABLE_PWMSERVO    // servo control (conflicts with regular pwm)
 //#define ENABLE_PWM         // motor or led control (conflicts with pwmservo)
@@ -66,17 +66,17 @@
 //#define ENABLE_FREQMEASURE   // it can use one of TIMER1, TIMER3, TIMER4, TIMER5, affects PWM
 //#define IR_DEBOUNCE        // uncomment to debounce IR with a delay
 //#define ENABLE_ADC         // analog to digital converter
-//#define ENABLE_TWI         // hardware I2C
+#define ENABLE_TWI         // hardware I2C
 //#define ENABLE_I2C_SOFTWARE // software I2C
-//#define ENABLE_CONVERSION    // useful for Serial, LCD and 7SEG Display
-//#define ENABLE_PCF8583     // require CONVERSION and I2C/TWI
+#define ENABLE_CONVERSION    // useful for Serial, LCD and 7SEG Display
+#define ENABLE_PCF8583     // require CONVERSION and I2C/TWI
 //#define ENABLE_ONE_WIRE    // one wire protocol
 //#define ENABLE_DS18_2_ // Dallas temperature sensors, require ONE_WIRE
 //#define ENABLE_NB_DELAYS // Non-blocking, slotted delays (instead of millis()) using Timer0
 //#define ENABLE_MILLIS     // use TIMER0, conflicts with NB_DELAYS
 //#define ENABLE_LCD         // require CONVERSION
 //#define ENABLE_GLCD
-#define ENABLE_7SEG        // starting from one digit, up to eight digits.
+//#define ENABLE_7SEG        // starting from one digit, up to eight digits.
 //#define ENABLE_ISPPROG     // Use Arduino as ISP Programmer - require SPI, conflict SD_Card
 //#define ENABLE_SPI         // hardware SPI (master)
 //#define ENABLE_SPI_INT     // hardware SPI use Interrupts
@@ -183,6 +183,7 @@ int16_t isr_countdowns[DELAY_SLOTS];
 // change TWI_FREQ according to your settings
 #define TWI_FREQ TWI_STANDARD_SPEED
 #endif //ENABLE_TWI
+//--
 #if defined(ENABLE_SERIAL)// interrupt based
 #define UART_BUFFER_SIZE  64 // buffer size for USART RX (receiving)
 // change it to your needs (16, 32, 64, 128)
@@ -492,7 +493,7 @@ uint8_t SEG_DIGITS_BUFFER[1];
 
 // set the PCF8583 address and which I2C it use...
 #ifdef ENABLE_PCF8583
-//#define PCF8583_USE_TWI // disable if you want to use the software I2C
+#define PCF8583_USE_TWI // disable if you want to use the software I2C
 #define PCF8583_A0 0;          // relative base address.
 #define Physical_Address 0xA2; // On EVB board, the address for PCF is 0xA2
 // - set to 0xA0 if pin A0 of PCF8583 is connected to GND
@@ -1030,6 +1031,8 @@ void byte2dec(uint8_t val, int8_t *s);
 #ifdef ENABLE_SERIAL // serial with interrupts...
 #ifdef USART0_RX_vect // if uC with more than one Serial peripheral ...
 #define UART0_ISR_VECT USART0_RX_vect
+#elif defined(USART_RXC_vect)
+#define UART0_ISR_VECT USART_RXC_vect
 #else
 #define UART0_ISR_VECT USART_RX_vect
 #endif
