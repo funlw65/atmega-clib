@@ -74,7 +74,6 @@ void main(void) {
 	sei();
 	// activate interrupts
 
-	hsec = 0;
 	buff_index = 0;
 	serial_puts_f("\r\nBooting...\0");
 	serial_puts_f("done.\r\n\0");
@@ -84,10 +83,9 @@ void main(void) {
 		if (serial_available() == TRUE) {
 			date_buff[buff_index] = serial_getchar();
 
-			// Use of (byte) type casting and ASCII math to achieve the result.
-
 			if (date_buff[buff_index] == ';') {
 				if (buff_index == 12) {
+					// Use of (byte) type casting and ASCII math to achieve the result.
 					year = (uint8_t) ((date_buff[0] - 48) * 10
 							+ (date_buff[1] - 48)) + 2000;
 					month = (uint8_t) ((date_buff[2] - 48) * 10
@@ -101,14 +99,13 @@ void main(void) {
 					sec = (uint8_t) ((date_buff[10] - 48) * 10
 							+ (date_buff[11] - 48));
 					serial_puts_f("... setting date ...\0");
-					PCF8583_set_time(hour, min, sec, hsec);
+					PCF8583_set_time(hour, min, sec, 0);
 					PCF8583_set_date(day, month, year);
 					serial_puts_f(" done!\r\n\0");
 				} else
-					// configuration string error: incomplete string!
 					serial_puts_f(
 							"Configuration error: wrong string length! Try again.\r\n\0");
-				// Now, just reset indexes and prepare for a new config,string if needed.
+				// Now, just reset indexes and prepare for a new config.string if needed.
 				serial_flush();
 				date_buff[buff_index] = ' ';
 				buff_index = 0;
