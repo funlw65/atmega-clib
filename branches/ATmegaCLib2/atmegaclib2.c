@@ -523,6 +523,7 @@ void byte2hex(uint8_t val, int8_t *s) {
 	s[2] = 0;
 }
 #endif // end conversion
+//--
 //Interrupt based.
 #ifdef ENABLE_SERIAL
 
@@ -542,6 +543,15 @@ void serial_init(void) {
 	uart_readptr = 0;
 
 	// set default baud rate
+#if defined(USART_RXC_vect) // for ATmega16A
+	UBRRH = UART_BAUD_SELECT >> 8;
+	UBRRL = UART_BAUD_SELECT;
+
+	// enable receive, transmit and enable receive interrupts
+	UCSRB = (1 << RXEN) | (1 << TXEN) | (1 << RXCIE);
+
+	// don't forget sei()
+#else
 	UBRR0H = UART_BAUD_SELECT >> 8;
 	UBRR0L = UART_BAUD_SELECT;
 
@@ -549,6 +559,7 @@ void serial_init(void) {
 	UCSR0B = (1 << RXEN0) | (1 << TXEN0) | (1 << RXCIE0);
 
 	// don't forget sei()
+#endif
 }
 
 uint8_t serial_getchar(void) {
@@ -600,10 +611,17 @@ uint8_t serial_getchar(void) {
 #if defined(ENABLE_SERIAL) || defined(ENABLE_SERIAL_POLL)
 void serial_putchar(uint8_t data) {
 	/* Wait for empty transmit buffer */
+#if defined(USART_RXC_vect)
+	while (!(UCSRA & (1 << UDRE)))
+		;
+	/* Start transmission */
+	UDR = data;
+#else
 	while (!(UCSR0A & (1 << UDRE0)))
 		;
 	/* Start transmission */
 	UDR0 = data;
+#endif
 }
 
 void serial_putstr(int8_t * s) {
