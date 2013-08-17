@@ -1047,7 +1047,12 @@ void serial_init(void);
 uint8_t serial_getchar(void);
 #endif // end Serial Poll
 #if defined(ENABLE_SERIAL) || defined(ENABLE_SERIAL_POLL)
+
+#if defined(USART_RXC_vect)
+#define UART0_DATA	UDR
+#else
 #define UART0_DATA	UDR0
+#endif
 
 void serial_putchar(uint8_t data);
 #define serial_putc(c__) serial_putchar((uint8_t)c__)

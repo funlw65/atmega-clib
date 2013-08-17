@@ -611,9 +611,8 @@ uint8_t serial_getchar(void) {
 #if defined(ENABLE_SERIAL) || defined(ENABLE_SERIAL_POLL)
 void serial_putchar(uint8_t data) {
 	/* Wait for empty transmit buffer */
-#if defined(USART_RXC_vect)
-	while (!(UCSRA & (1 << UDRE)))
-		;
+#if defined(USART_RXC_vect) // added for ATmega16A
+	while (!(UCSRA & (1 << UDRE)));
 	/* Start transmission */
 	UDR = data;
 #else
