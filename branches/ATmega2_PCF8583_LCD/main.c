@@ -51,6 +51,18 @@
 
 // Then chose what pins you will use for LCD.
 
+// IMPORTANT! The date and hour are set via serial and you must send a
+// string to the microcontroller with the following format:
+// 130818192300;
+// Where : 13 is 2013 year,
+//         08 is the August month
+//         18 is the day,
+//         19 is the hour,
+//         23 are the minutes,
+//         00 are the seconds
+// and the string ends with ; character, telling the microcontroller that
+// we have done sending the configuration string.
+
 #ifndef F_CPU
 #define F_CPU 16000000U // required by Atmel Studio 6
 #endif
