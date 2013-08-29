@@ -14,6 +14,8 @@
  *  - (c) 2011 Joe Pardue, http://code.google.com/p/avrtoolbox/
  *  - (c) 2011 Martin Thomas, http://www.siwawi.arubi.uni-kl.de/avr-projects/
  *  - (c) 2011 PJRC.COM, LLC - Paul Stoffregen, http://www.pjrc.com/
+ *  - (c) 2011 ChaN, http://elm-chan.org/fsw/strf/xprintf.html
+ *  - (c) 2011 Several Authors, http://www.das-labor.org/wiki/RFM12_library/en
  *  - (c) 2012 Vasile Guta Ciucur, https://sites.google.com/site/funlw65/
  *  - (c) xxxx Fabian Maximilian Thiele, website's gone
  *
@@ -50,15 +52,16 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <avr/pgmspace.h>
+#include <avr/sleep.h>
 
 // ============== USER ZONE --- DO WHATEVER SETTINGS YOU NEED ==================
 
 // *****************************************************************************
 // Enabling/disabling additional functionality
 // *****************************************************************************
-#define UART_BAUD_RATE     57600 // default is 57600
-#define UART_BAUD_SELECT   (F_CPU / (UART_BAUD_RATE * 16L) - 1) //- don't touch
-#define ENABLE_SERIAL // Interrupt based, require CONVERSION, conflicts with SERIAL_POLL
+//#define UART_BAUD_RATE     57600 // default is 57600
+//#define UART_BAUD_SELECT   (F_CPU / (UART_BAUD_RATE * 16L) - 1) //- don't touch
+//#define ENABLE_SERIAL // Interrupt based, require CONVERSION, conflicts with SERIAL_POLL
 //#define ENABLE_SERIAL_POLL // require CONVERSION, conflicts with SERIAL
 //#define ENABLE_PWMSERVO    // servo control (conflicts with regular pwm)
 //#define ENABLE_PWM         // motor or led control (conflicts with pwmservo)
@@ -66,10 +69,11 @@
 //#define ENABLE_FREQMEASURE   // it can use one of TIMER1, TIMER3, TIMER4, TIMER5, affects PWM
 //#define IR_DEBOUNCE        // uncomment to debounce IR with a delay
 //#define ENABLE_ADC         // analog to digital converter
-#define ENABLE_TWI         // hardware I2C
+//#define ENABLE_TWI         // hardware I2C
 //#define ENABLE_I2C_SOFTWARE // software I2C
 #define ENABLE_CONVERSION    // useful for Serial, LCD and 7SEG Display
-#define ENABLE_PCF8583     // require CONVERSION and I2C/TWI
+#define ENABLE_XPRINTF       // Hmmm...
+//#define ENABLE_PCF8583     // require CONVERSION and I2C/TWI
 //#define ENABLE_ONE_WIRE    // one wire protocol
 //#define ENABLE_DS18_2_ // Dallas temperature sensors, require ONE_WIRE
 //#define ENABLE_NB_DELAYS // Non-blocking, slotted delays (instead of millis()) using Timer0
@@ -78,16 +82,26 @@
 //#define ENABLE_GLCD
 //#define ENABLE_7SEG        // starting from one digit, up to eight digits.
 //#define ENABLE_ISPPROG     // Use Arduino as ISP Programmer - require SPI, conflict SD_Card
-//#define ENABLE_SPI         // hardware SPI (master)
+#define ENABLE_SPI         // hardware SPI (master)
 //#define ENABLE_SPI_INT     // hardware SPI use Interrupts
 //#define ENABLE_SD_CARD_DEBUG // SD_ and F32_ functions send info on serial console
 //#define ENABLE_SD_CARD       // raw SD Card operations; require SPI
 //#define ENABLE_FAT32         // require PCF8583, SPI and SD_CARD
+#define ENABLE_RFM12B      // radio comm.
 //#define OPTIMIZE_SPEED
 // *****************************************************************************
 // End block of "enable/disable" features
 // *****************************************************************************
 
+//--
+#ifdef ENABLE_XPRINTF
+#define _USE_XFUNC_OUT	1	/* 1: Use output functions */
+#define	_CR_CRLF		1	/* 1: Convert \n ==> \r\n in the output char */
+
+#define _USE_XFUNC_IN	0	/* 1: Use input function */
+#define	_LINE_ECHO		1	/* 1: Echo back input chars in xgets function */
+#endif
+//--
 //Slotted delays
 #ifdef ENABLE_NB_DELAYS
 //the following define the number of non-blocking delays.
@@ -103,6 +117,7 @@ int16_t isr_countdowns[DELAY_SLOTS];
 	defined(__AVR_ATmega16A__)     || \
     defined(__AVR_ATmega164P__)    || \
     defined(__AVR_ATmega32__)      || \
+    defined(__AVR_ATmega32A__)     || \
     defined(__AVR_ATmega324P__)    || \
     defined(__AVR_ATmega324PA__)   || \
     defined(__AVR_ATmega644__)     || \
@@ -215,6 +230,7 @@ int16_t isr_countdowns[DELAY_SLOTS];
 		defined(__AVR_ATmega16A__)     || \
 	    defined(__AVR_ATmega164P__)    || \
 	    defined(__AVR_ATmega32__)      || \
+	    defined(__AVR_ATmega32A__)     || \
 	    defined(__AVR_ATmega324P__)    || \
 	    defined(__AVR_ATmega324PA__)   || \
 	    defined(__AVR_ATmega644__)     || \
@@ -258,10 +274,10 @@ int16_t isr_countdowns[DELAY_SLOTS];
 #define OW_ONE_BUS
 
 #ifdef OW_ONE_BUS
-#define OW_PIN  PD7
-#define OW_IN   PIND
-#define OW_DDR  DDRD
-#define OW_OUT  PORTD
+#define OW_PIN  PC5
+#define OW_IN   PINC
+#define OW_DDR  DDRC
+#define OW_OUT  PORTC
 #define OW_CONF_DELAYOFFSET 0
 
 #else
@@ -338,6 +354,7 @@ int16_t isr_countdowns[DELAY_SLOTS];
 //#define LCD_4X16
 //#define LCD_4X20
 #endif //ENABLE_LCD
+//--
 #ifdef ENABLE_GLCD
 // define which ports are allocated for your graphic LCD
 // You need two full ports for this!
@@ -345,6 +362,7 @@ int16_t isr_countdowns[DELAY_SLOTS];
 // Included some changes for future additions, as separate settings for
 // individual pins but don't touch that yet!!!
 #define GLCD_CMD_PORT   PORTA		// Command Output Register
+// THE FOLLWOING ARE NOT IMPLEMENTED YET, DON'T USE
 // here goes the settings for every pin if maximum flexibility is desired
 // #define GLCD_CMD_PORT_D_I
 // #define GLCD_CMD_PORT_RW
@@ -353,6 +371,7 @@ int16_t isr_countdowns[DELAY_SLOTS];
 // #define GLCD_CMD_PORT_CSEL2
 
 #define GLCD_CMD_DIR    DDRA		// Data Direction Register for Command Port
+// THE FOLLWOING ARE NOT IMPLEMENTED YET, DON'T USE
 // here goes the settings for every pin if maximum flexibility is desired
 // #define GLCD_CMD_DIR_D_I
 // #define GLCD_CMD_DIR_RW
@@ -361,6 +380,7 @@ int16_t isr_countdowns[DELAY_SLOTS];
 // #define GLCD_CMD_DIR_CSEL2
 
 #define GLCD_DATA_IN    PINC		// Data Input Register
+// THE FOLLWOING ARE NOT IMPLEMENTED YET, DON'T USE
 // here goes the settings for every pin if maximum flexibility is desired
 // #define GLCD_DATA_IN_0
 // #define GLCD_DATA_IN_1
@@ -372,6 +392,7 @@ int16_t isr_countdowns[DELAY_SLOTS];
 // #define GLCD_DATA_IN_7
 
 #define GLCD_DATA_OUT   PORTC		// Data Output Register
+// THE FOLLWOING ARE NOT IMPLEMENTED YET, DON'T USE
 // here goes the settings for every pin if maximum flexibility is desired
 // #define GLCD_DATA_OUT_0
 // #define GLCD_DATA_OUT_1
@@ -383,6 +404,7 @@ int16_t isr_countdowns[DELAY_SLOTS];
 // #define GLCD_DATA_OUT_7
 
 #define GLCD_DATA_DIR   DDRC		// Data Direction Register for Data Port
+// THE FOLLWOING ARE NOT IMPLEMENTED YET, DON'T USE
 // here goes the settings for every pin if maximum flexibility is desired
 // #define GLCD_DATA_DIR_0
 // #define GLCD_DATA_DIR_1
@@ -490,16 +512,20 @@ uint8_t SEG_DIGITS_BUFFER[1];
 //#define SEG_COMM_7_PIN P
 
 #endif
-
-// set the PCF8583 address and which I2C it use...
+//--
 #ifdef ENABLE_PCF8583
+// set the PCF8583 address and which I2C it use...
 #define PCF8583_USE_TWI // disable if you want to use the software I2C
-#define PCF8583_A0 0;          // relative base address.
+#define PCF8583_A0 0;          // relative base address, let it be
 #define Physical_Address 0xA2; // On EVB board, the address for PCF is 0xA2
 // - set to 0xA0 if pin A0 of PCF8583 is connected to GND
 // - set to 0xA2 if pin A0 of PCF8583 is connected to VCC
 #endif
+//--
+#ifdef ENABLE_RFM12B
 
+#endif //ENABLE_RFM12B
+//--
 // ============ END USER ZONE --- NO EDITING ALLOWED!       ====================
 // = ************************************************************************* =
 // ============ DON'T MAKE MODIFICATIONS BELLOW THIS BORDER ====================
@@ -606,6 +632,7 @@ volatile uint8_t SPI_TC;
 	defined(__AVR_ATmega16A__)     || \
     defined(__AVR_ATmega164P__)    || \
     defined(__AVR_ATmega32__)      || \
+    defined(__AVR_ATmega32A__)     || \
     defined(__AVR_ATmega324P__)    || \
     defined(__AVR_ATmega324PA__)   || \
     defined(__AVR_ATmega644__)     || \
@@ -666,7 +693,7 @@ volatile uint8_t SPI_TC;
 #define SPI_CLOCK_DIV2 0x04
 #define SPI_CLOCK_DIV8 0x05
 #define SPI_CLOCK_DIV32 0x06
-//#define SPI_CLOCK_DIV64 0x07
+#define SPI_CLOCK_2DIV64 0x07
 
 #define SPI_MODE0 0x00
 #define SPI_MODE1 0x04
@@ -699,6 +726,7 @@ uint8_t SPI_master_receive(void);
 uint8_t SPI_master_transaction(uint8_t a, uint8_t b, uint8_t c, uint8_t d);
 
 #endif // ENABLE_SPI
+//--
 #ifdef ENABLE_SD_CARD
 //SD commands, many of these are not used ...
 #define GO_IDLE_STATE            0
@@ -877,7 +905,11 @@ void F32_displayMemory(uint8_t flag, uint32_t memory);
 void F32_deleteFile(uint8_t *fileName);
 void F32_freeMemoryUpdate(uint8_t flag, uint32_t size);
 #endif //ENABLE_FAT32
-//
+//--
+#ifdef ENABLE_RFM12B
+
+#endif
+//--
 #ifdef ENABLE_ONE_WIRE
 #define OW_MATCH_ROM    0x55
 #define OW_SKIP_ROM     0xCC
@@ -1028,6 +1060,34 @@ void word2hex(uint16_t val, int8_t *s);
 void double2hex(uint32_t val, int8_t *s);
 void byte2dec(uint8_t val, int8_t *s);
 #endif // end Conversion
+//--
+#ifdef ENABLE_XPRINTF
+#if _USE_XFUNC_OUT
+#define xdev_out(func) xfunc_out = (void(*)(unsigned char))(func)
+extern void (*xfunc_out)(unsigned char);
+void xputc (char c);
+void xputs (const char* str);
+void xfputs (void (*func)(unsigned char), const char* str);
+void xprintf (const char* fmt, ...);
+void xprintf_P (const char* fmt, ...);
+void xsprintf (char* buff, const char* fmt, ...);
+void xsprintf_P (char* buff, const char* fmt, ...);
+void xfprintf (void (*func)(unsigned char), const char*	fmt, ...);
+void put_dump (const void* buff, unsigned long addr, int len, int width);
+#define DW_CHAR		sizeof(char)
+#define DW_SHORT	sizeof(short)
+#define DW_LONG		sizeof(long)
+#endif
+
+#if _USE_XFUNC_IN
+#define xdev_in(func) xfunc_in = (unsigned char(*)(void))(func)
+extern unsigned char (*xfunc_in)(void);
+int xgets (char* buff, int len);
+int xfgets (unsigned char (*func)(void), char* buff, int len);
+int xatoi (char** str, long* res);
+#endif
+#endif
+//--
 #ifdef ENABLE_SERIAL // serial with interrupts...
 #ifdef USART0_RX_vect // if uC with more than one Serial peripheral ...
 #define UART0_ISR_VECT USART0_RX_vect
@@ -1274,10 +1334,10 @@ static inline void capture_shutdown(void)
 #define TIMER_CAPTURE_VECTOR   TIMER5_CAPT_vect
 #endif // CAPTURE_USE_***
 // Main functions
-void     FreqMeasure_begin(void);
-uint8_t  FreqMeasure_available(void);
+void FreqMeasure_begin(void);
+uint8_t FreqMeasure_available(void);
 uint32_t FreqMeasure_read(void);
-void     FreqMeasure_end(void);
+void FreqMeasure_end(void);
 
 #endif //ENABLE_FREQMEASURE
 #ifdef ENABLE_ADC
@@ -1554,12 +1614,12 @@ void GLCD_WriteData(uint8_t data);
 #ifdef ENABLE_7SEG
 // this is NOT user zone
 typedef enum mydigit {
-	SELECT_DIGIT_ONE   = 1,
-	SELECT_DIGIT_TWO   = 2,
+	SELECT_DIGIT_ONE = 1,
+	SELECT_DIGIT_TWO = 2,
 	SELECT_DIGIT_THREE = 4,
-	SELECT_DIGIT_FOUR  = 8,
-	SELECT_DIGIT_FIVE  = 16,
-	SELECT_DIGIT_SIX   = 32,
+	SELECT_DIGIT_FOUR = 8,
+	SELECT_DIGIT_FIVE = 16,
+	SELECT_DIGIT_SIX = 32,
 	SELECT_DIGIT_SEVEN = 64,
 	SELECT_DIGIT_EIGHT = 128
 }MyDigit;
@@ -1628,6 +1688,7 @@ void PCF8583_set_alarm_date(uint8_t day, uint8_t month);
   defined(__AVR_ATmega16A__)     || \
   defined(__AVR_ATmega164P__)    || \
   defined(__AVR_ATmega32__)      || \
+  defined(__AVR_ATmega32A__)     || \
   defined(__AVR_ATmega324P__)    || \
   defined(__AVR_ATmega324PA__)   || \
   defined(__AVR_ATmega644__)     || \
