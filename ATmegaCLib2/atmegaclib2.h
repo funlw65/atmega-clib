@@ -15,7 +15,9 @@
  *  - (c) 2011 Martin Thomas, http://www.siwawi.arubi.uni-kl.de/avr-projects/
  *  - (c) 2011 PJRC.COM, LLC - Paul Stoffregen, http://www.pjrc.com/
  *  - (c) 2011 ChaN, http://elm-chan.org/fsw/strf/xprintf.html
- *  - (c) 2011 Several Authors, http://www.das-labor.org/wiki/RFM12_library/en
+ *  - (c) 2011 Hans-Gert Dahmen, http://www.das-labor.org/wiki/RFM12_library/en
+ *  - (c) 2011 Peter Fuhrmann, http://www.das-labor.org/wiki/RFM12_library/en
+ *  - (c) 2011 Soeren Heisrath, http://www.das-labor.org/wiki/RFM12_library/en
  *  - (c) 2012 Vasile Guta Ciucur, https://sites.google.com/site/funlw65/
  *  - (c) xxxx Fabian Maximilian Thiele, website's gone
  *
@@ -71,8 +73,8 @@
 //#define ENABLE_ADC         // analog to digital converter
 //#define ENABLE_TWI         // hardware I2C
 //#define ENABLE_I2C_SOFTWARE // software I2C
-#define ENABLE_CONVERSION    // useful for Serial, LCD and 7SEG Display
-#define ENABLE_XPRINTF       // Hmmm...
+//#define ENABLE_CONVERSION    // useful for Serial, LCD and 7SEG Display
+//#define ENABLE_XPRINTF       // Hmmm...
 //#define ENABLE_PCF8583     // require CONVERSION and I2C/TWI
 //#define ENABLE_ONE_WIRE    // one wire protocol
 //#define ENABLE_DS18_2_ // Dallas temperature sensors, require ONE_WIRE
@@ -87,7 +89,7 @@
 //#define ENABLE_SD_CARD_DEBUG // SD_ and F32_ functions send info on serial console
 //#define ENABLE_SD_CARD       // raw SD Card operations; require SPI
 //#define ENABLE_FAT32         // require PCF8583, SPI and SD_CARD
-#define ENABLE_RFM12B      // radio comm.
+#define ENABLE_RFM12B      // radio comm.- uses TIMER2, requires SPI
 //#define OPTIMIZE_SPEED
 // *****************************************************************************
 // End block of "enable/disable" features
@@ -523,6 +525,19 @@ uint8_t SEG_DIGITS_BUFFER[1];
 #endif
 //--
 #ifdef ENABLE_RFM12B
+// Define the CS pin for RFM12B module
+// (check if it conflicts with SD card or any other SPI module)
+#define RF_CS_DDR  DDRB
+#define RF_CS_PORT PORTB
+#define RF_CS_PIN  PB4
+//define activity LEDs (disable them if you don't have available pins)
+#define GREEN_LED_DDR  DDRB
+#define GREEN_LED_PORT PORTB
+#define GREEN_LED_PIN  PB4
+
+#define RED_LED_DDR  DDRB
+#define RED_LED_PORT PORTB
+#define RED_LED_PIN  PB4
 
 #endif //ENABLE_RFM12B
 //--
@@ -647,6 +662,10 @@ volatile uint8_t SPI_TC;
 #define MOSI_PORT PORTB
 #define MOSI_DDR  DDRB
 
+#define MISO      PB6
+#define MISO_PORT PORTB
+// no need for MISO_DDR, as is set automatically as input
+
 #define SS      PB4
 #define SS_PORT PORTB
 #define SS_DDR  DDRB
@@ -659,6 +678,10 @@ volatile uint8_t SPI_TC;
 #define MOSI      PB2
 #define MOSI_PORT PORTB
 #define MOSI_DDR  DDRB
+
+#define MISO      PB3
+#define MISO_PORT PORTB
+// no need for MISO_DDR, as is set automatically as input
 
 #define SS      PB0
 #define SS_PORT PORTB
@@ -677,6 +700,10 @@ volatile uint8_t SPI_TC;
 #define MOSI      PB3
 #define MOSI_PORT PORTB
 #define MOSI_DDR  DDRB
+
+#define MISO      PB4
+#define MISO_PORT PORTB
+// no need for MISO_DDR, as is set automatically as input
 
 #define SS      PB2
 #define SS_PORT PORTB
@@ -907,6 +934,26 @@ void F32_freeMemoryUpdate(uint8_t flag, uint32_t size);
 #endif //ENABLE_FAT32
 //--
 #ifdef ENABLE_RFM12B
+// use the following whenever read or send from/to RFM12B module,
+// and especially when you have other modules connected to SPI and need
+// different transmission speed (e.g., SD-Card)
+#define RF_SPI_LOW_SPEED SPCR = 0x50; SPSR = 0
+
+unsigned char volatile DATA_RDY2SND = 0;		// flag for indicating when to transmit data
+unsigned char volatile rf_buff[256], rf_rxbuff[256];	//provide some buffer for data
+
+int volatile rf_buffindex = 0;			// index for keeping place in buffer
+unsigned char volatile rf_rxbuffindex = 0;			// index for keeping place in buffer
+
+/*inline void timeout_init(void);
+inline uint8_t timeout(void);
+uint8_t rf12_is_ready(void);
+uint16_t rf12_trans(uint16_t to_send);
+void rf12_txbyte(uint8_t b);
+uint8_t rf12_rxbyte(void);*/
+void radio_config(void);
+void radio_send(uint8_t volatile * buffer, uint8_t len);
+int16_t radio_rcv(uint8_t volatile * buffer, uint8_t max_len);
 
 #endif
 //--
