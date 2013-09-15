@@ -87,8 +87,8 @@
 #define ENABLE_SPI         // hardware SPI (master)
 //#define ENABLE_SPI_INT     // hardware SPI use Interrupts
 //#define ENABLE_SD_CARD_DEBUG // SD_ and F32_ functions send info on serial console
-//#define ENABLE_SD_CARD       // raw SD Card operations; require SPI
-//#define ENABLE_FAT32         // require PCF8583, SPI and SD_CARD
+#define ENABLE_SD_CARD       // raw SD Card operations; require SPI
+#define ENABLE_FAT32         // require PCF8583, SPI and SD_CARD
 #define ENABLE_RFM12B      // radio comm.- uses TIMER2, requires SPI
 //#define OPTIMIZE_SPEED
 // *****************************************************************************
@@ -525,6 +525,10 @@ uint8_t SEG_DIGITS_BUFFER[1];
 #endif
 //--
 #ifdef ENABLE_RFM12B
+// Enable (regarding to your freq.) only one of the following two definitions
+//#define RF_FREQ_868MHz 1
+#define RF_FREQ_433MHz 1
+
 // Define the CS pin for RFM12B module
 // (check if it conflicts with SD card or any other SPI module)
 #define RF_CS_DDR  DDRB
@@ -934,6 +938,31 @@ void F32_freeMemoryUpdate(uint8_t flag, uint32_t size);
 #endif //ENABLE_FAT32
 //--
 #ifdef ENABLE_RFM12B
+/* DOCUMENTATION
+ *
+ * 	- Hardware connections:
+
+	RFM12B		|	ATMEGA328P	|	Other Hardware		|	ATMEGA1284P
+	------------------------------------------------------------------
+		GND		|	   GND		|						|	GND
+		VDD		|	   3.3V		|						|	3.3V
+
+		FSK		|	   NC		|						|	NC
+		CLK		|	   NC		|						|	NC
+		DCLK	|	   NC		|						|	NC
+		NIRQ	|	   NC		|						|	NC
+		NRES	|	   NC		|						|	NC
+
+		NSEL	|	   PB2		|						|	PB4
+		SCK		|	   PB5		|						|	PB7
+		SDI		|	   PB3		|						|	PB5
+		SDO		|	   PB4		|						|	PB6
+
+				|	   PB1		| 	RED LED circuit		|	PC4
+				|	   PB0		| 	GREEN LED circuit	|	PC6
+ *
+ */
+
 // use the following whenever read or send from/to RFM12B module,
 // and especially when you have other modules connected to SPI and need
 // different transmission speed (e.g., SD-Card)
