@@ -1,10 +1,11 @@
 /* *****************************************************************************
  *  BSD License
- *  ATmega-CLib - a BSD library for using GNU toolchain mainly with EvB4.3
- *                board, but also Arduino, Sanguino, ...
+ *  ATmega-CLib - a BSD library for using GNU toolchain mainly with EvB4.3 and
+ *                EvB5.1 boards, but also Arduino, Sanguino, etc...
  *  Portions Copyright:
  *  - (c) 1998 Wouter van Ooijen, http://www.voti.nl/winkel/index.html
  *  - (c) 2004 Robert Krysztof, website's gone
+ *  - (c) 2007 Stefan Engelke, http://www.tinkerer.eu/AVRLib/nRF24L01
  *  - (c) 2009 Michael Spiceland, https://code.google.com/p/libarduino/
  *  - (c) 2009 Joep Suijs, http://www.blogger.com/profile/06821529393453332522
  *  - (c) 2009 Vasile Surducan, http://vsurducan.blogspot.com/
@@ -15,9 +16,10 @@
  *  - (c) 2011 Martin Thomas, http://www.siwawi.arubi.uni-kl.de/avr-projects/
  *  - (c) 2011 PJRC.COM, LLC - Paul Stoffregen, http://www.pjrc.com/
  *  - (c) 2011 ChaN, http://elm-chan.org/fsw/strf/xprintf.html
- *  - (c) 2011 Hans-Gert Dahmen, http://www.das-labor.org/wiki/RFM12_library/en
- *  - (c) 2011 Peter Fuhrmann, http://www.das-labor.org/wiki/RFM12_library/en
- *  - (c) 2011 Soeren Heisrath, http://www.das-labor.org/wiki/RFM12_library/en
+ *  - (c) xxxx Aleksander Mielczarek, http://olek.tk/en/rfm12.php
+ *  - (c) 2012 Hans-Gert Dahmen, http://www.das-labor.org/wiki/RFM12_library/en
+ *  - (c) 2012 Peter Fuhrmann, http://www.das-labor.org/wiki/RFM12_library/en
+ *  - (c) 2012 Soeren Heisrath, http://www.das-labor.org/wiki/RFM12_library/en
  *  - (c) 2012 Vasile Guta Ciucur, https://sites.google.com/site/funlw65/
  *  - (c) xxxx Fabian Maximilian Thiele, website's gone
  *
@@ -55,6 +57,7 @@
 #include <stdio.h>
 #include <avr/pgmspace.h>
 #include <avr/sleep.h>
+#include "nRF24L01.h"
 
 // ============== USER ZONE --- DO WHATEVER SETTINGS YOU NEED ==================
 
@@ -67,19 +70,21 @@
 //#define ENABLE_SERIAL_POLL // require CONVERSION, conflicts with SERIAL
 //#define ENABLE_PWMSERVO    // servo control (conflicts with regular pwm)
 //#define ENABLE_PWM         // motor or led control (conflicts with pwmservo)
-//#define ENABLE_IR          // infrared receiver, SONY protocol- it use TIMER0
+//#define ENABLE_IR          // infrared receiver, SONY protocol- it use TIMER0 and INT0
 //#define ENABLE_FREQMEASURE   // it can use one of TIMER1, TIMER3, TIMER4, TIMER5, affects PWM
 //#define IR_DEBOUNCE        // uncomment to debounce IR with a delay
 //#define ENABLE_ADC         // analog to digital converter
 //#define ENABLE_TWI         // hardware I2C
 //#define ENABLE_I2C_SOFTWARE // software I2C
-//#define ENABLE_CONVERSION    // useful for Serial, LCD and 7SEG Display
+#define ENABLE_CONVERSION    // useful for Serial, LCD and 7SEG Display
 //#define ENABLE_XPRINTF       // Hmmm...
 //#define ENABLE_PCF8583     // require CONVERSION and I2C/TWI
 //#define ENABLE_ONE_WIRE    // one wire protocol
 //#define ENABLE_DS18_2_ // Dallas temperature sensors, require ONE_WIRE
 //#define ENABLE_NB_DELAYS // Non-blocking, slotted delays (instead of millis()) using Timer0
 //#define ENABLE_MILLIS     // use TIMER0, conflicts with NB_DELAYS
+//#define ENABLE_EXTINT // External Interrupt(INT0,INT1,INT2) - not implemented yet.
+//#define ENABLE_PCINT   // Pin on Change Interrupt(PCINT) - not implemented yet.
 //#define ENABLE_LCD         // require CONVERSION
 //#define ENABLE_GLCD
 //#define ENABLE_7SEG        // starting from one digit, up to eight digits.
@@ -87,9 +92,11 @@
 #define ENABLE_SPI         // hardware SPI (master)
 //#define ENABLE_SPI_INT     // hardware SPI use Interrupts
 //#define ENABLE_SD_CARD_DEBUG // SD_ and F32_ functions send info on serial console
-#define ENABLE_SD_CARD       // raw SD Card operations; require SPI
-#define ENABLE_FAT32         // require PCF8583, SPI and SD_CARD
-#define ENABLE_RFM12B      // radio comm.- uses TIMER2, requires SPI
+//#define ENABLE_SD_CARD       // raw SD Card operations; require SPI
+//#define ENABLE_FAT32         // require PCF8583, SPI and SD_CARD
+//#define ENABLE_RFM12B      // radio comm.- uses TIMER2, requires SPI
+//#define ENABLE_GPL_RFM12B //requires SPI, XPRINTF, conflicts with RFM12B and IR
+#define ENABLE_MIRF24     // requires SPI
 //#define OPTIMIZE_SPEED
 // *****************************************************************************
 // End block of "enable/disable" features
@@ -253,6 +260,9 @@ int16_t isr_countdowns[DELAY_SLOTS];
 #endif //ENABLE_FREQMEASURE
 //--
 #ifdef ENABLE_SD_CARD
+#ifndef ENABLE_SPI
+#error "This needs SPI so, uncomment ENANBLE_SPI from the library header"
+#endif
 //define the pin used for CS (chip select) the SD Card
 //it can be the SPI SS pin if you want (recommended if SD is the first SPI peripheral)
 //default is set for atmega168p/328p (PB2) but it is an ongoing project,
@@ -264,6 +274,12 @@ int16_t isr_countdowns[DELAY_SLOTS];
 #endif //ENABLE_SD_CARD
 //--
 #ifdef ENABLE_FAT32
+#ifndef ENABLE_SPI
+#error "This needs SPI so, uncomment ENANBLE_SPI from the library header"
+#endif
+#ifndef ENABLE_SD_CARD
+#error "This needs SD_CARD so, uncomment ENANBLE_SD_CARD from the library header"
+#endif
 #define MAX_STRING_SIZE     100 //defining the maximum size of the dataString
 #endif //ENABLE_FAT32
 //set 1 wire pin
@@ -424,6 +440,7 @@ int16_t isr_countdowns[DELAY_SLOTS];
 #define GLCD_CSEL1      0x03		// CS1 Bit Number
 #define GLCD_CSEL2      0x04		// CS2 Bit Number
 #endif //ENABLE_GLCD
+//--
 #ifdef ENABLE_7SEG
 // Define delay in microseconds between digits selection to avoid ghost effect
 #define SEG_DELAY 1500
@@ -525,6 +542,9 @@ uint8_t SEG_DIGITS_BUFFER[1];
 #endif
 //--
 #ifdef ENABLE_RFM12B
+#ifndef ENABLE_SPI
+#error "This needs SPI so, uncomment ENANBLE_SPI from the library header"
+#endif
 // Enable (regarding to your freq.) only one of the following two definitions
 //#define RF_FREQ_868MHz 1
 #define RF_FREQ_433MHz 1
@@ -545,6 +565,237 @@ uint8_t SEG_DIGITS_BUFFER[1];
 
 #endif //ENABLE_RFM12B
 //--
+#ifdef ENABLE_GPL_RFM12B
+/******************************************************
+ *                                                    *
+ *           C O N F I G U R A T I O N                *
+ *                                                    *
+ ******************************************************/
+
+/*
+ Connect the RFM12 to the AVR as follows:
+
+ RFM12           | AVR
+ ----------------+------------
+ SDO             | MISO
+ nIRQ            | INT0
+ FSK/DATA/nFFS   | VCC
+ DCLK/CFIL/FFIT  |  -
+ CLK             |  -
+ nRES            |  -
+ GND             | GND
+ ANT             |  -
+ VDD             | VCC
+ GND             | GND
+ nINT/VDI        | -
+ SDI             | MOSI
+ SCK             | SCK
+ nSEL            | Slave select pin defined below RF_BIT_SS, etc...
+ */
+
+/************************
+ * RFM12 PIN DEFINITIONS
+ */
+
+//Pin that the RFM12's slave select is connected to
+#define RF_DDR_SS DDRC
+#define RF_PORT_SS PORTC
+#define RF_BIT_SS 3
+
+//SPI setup
+// - we don't need this part, as we have our SPI functions
+
+/************************
+ * RFM12 CONFIGURATION OPTIONS
+ */
+
+//baseband of the module (either RFM12_BAND_433, RFM12_BAND_868 or RFM12_BAND_912)
+#define RFM12_BASEBAND RFM12_BAND_433
+
+//center frequency to use (+- FSK frequency shift)
+#define RFM12_FREQUENCY       433170000UL
+
+//Transmit FSK frequency shift in kHz
+#define FSK_SHIFT             125000
+
+//Receive RSSI Threshold
+#define RFM12_RSSI_THRESHOLD  RFM12_RXCTRL_RSSI_79
+
+//Receive Filter Bandwidth
+#define RFM12_FILTER_BW       RFM12_RXCTRL_BW_400
+
+//Output power relative to maximum (0dB is maximum)
+#define RFM12_POWER           RFM12_TXCONF_POWER_0
+
+//Receive LNA gain
+#define RFM12_LNA_GAIN        RFM12_RXCTRL_LNA_6
+
+//crystal load capacitance - the frequency can be verified by measuring the
+//clock output of RFM12 and comparing to 1MHz.
+//11.5pF seems to be o.k. for RFM12, and 10.5pF for RFM12BP, but this may vary.
+#define RFM12_XTAL_LOAD       RFM12_XTAL_11_5PF
+
+//use this for datarates >= 2700 Baud
+#define DATARATE_VALUE        RFM12_DATARATE_CALC_HIGH(9600.0)
+
+//use this for 340 Baud < datarate < 2700 Baud
+//#define DATARATE_VALUE      RFM12_DATARATE_CALC_LOW(1200.0)
+
+//TX BUFFER SIZE
+#define RFM12_TX_BUFFER_SIZE  30
+
+//RX BUFFER SIZE (there are going to be 2 Buffers of this size for double_buffering)
+#define RFM12_RX_BUFFER_SIZE  30
+
+/************************
+ * RFM12 INTERRUPT VECTOR
+ * set the name for the interrupt vector here
+ */
+
+#if defined(EICRA) && defined(ISC00) && defined(EIMSK)
+//the interrupt vector
+#define RFM12_INT_VECT (INT0_vect)
+
+//the interrupt mask register
+#define RFM12_INT_MSK EIMSK
+
+//the interrupt bit in the mask register
+#define RFM12_INT_BIT (INT0)
+
+//the interrupt flag register
+#define RFM12_INT_FLAG EIFR
+
+//the interrupt bit in the flag register
+#define RFM12_FLAG_BIT (INTF0)
+
+//setup the interrupt to trigger on negative edge
+#define RFM12_INT_SETUP()   EICRA |= (1<<ISC11)
+
+
+#elif defined(MCUCR) && defined(ISC00) && defined(GICR)
+//the interrupt vector
+#define RFM12_INT_VECT (INT0_vect)
+
+//the interrupt mask register
+#define RFM12_INT_MSK GICR
+
+//the interrupt bit in the mask register
+#define RFM12_INT_BIT (INT0)
+
+//the interrupt flag register
+#define RFM12_INT_FLAG GIFR
+
+//the interrupt bit in the flag register
+#define RFM12_FLAG_BIT (INTF0)
+
+//setup the interrupt to trigger on negative edge
+#define RFM12_INT_SETUP()   MCUCR |= (1<<ISC11)
+
+#elif defined(MCUCR) && defined(ISC00) && defined(GIMSK)
+//the interrupt vector
+#define RFM12_INT_VECT (INT0_vect)
+
+//the interrupt mask register
+#define RFM12_INT_MSK GIMSK
+
+//the interrupt bit in the mask register
+#define RFM12_INT_BIT (INT0)
+
+//the interrupt flag register
+#define RFM12_INT_FLAG GIFR
+
+//the interrupt bit in the flag register
+#define RFM12_FLAG_BIT (INTF0)
+
+//setup the interrupt to trigger on negative edge
+#define RFM12_INT_SETUP()   MCUCR |= (1<<ISC11)
+
+
+#else
+#error "Interrupt not finished for this CPU"
+#endif
+
+/************************
+ * FEATURE CONFIGURATION
+ */
+
+#define RFM12_LIVECTRL 0
+#define RFM12_LIVECTRL_CLIENT 0
+#define RFM12_LIVECTRL_HOST 0
+#define RFM12_LIVECTRL_LOAD_SAVE_SETTINGS 0
+#define RFM12_NORETURNS 0
+#define RFM12_NOCOLLISIONDETECTION 0
+#define RFM12_TRANSMIT_ONLY 0
+#define RFM12_SPI_SOFTWARE 0
+#define RFM12_USE_POLLING 0
+#define RFM12_RECEIVE_ASK 0
+#define RFM12_TRANSMIT_ASK 0
+#define RFM12_USE_WAKEUP_TIMER 0
+#define RFM12_USE_POWER_CONTROL 0
+#define RFM12_LOW_POWER 0
+#define RFM12_USE_CLOCK_OUTPUT 0
+#define RFM12_LOW_BATT_DETECTOR 0
+
+#define RFM12_LBD_VOLTAGE             RFM12_LBD_VOLTAGE_3V0
+
+#define RFM12_CLOCK_OUT_FREQUENCY     RFM12_CLOCK_OUT_FREQUENCY_1_00_MHz
+
+/* use a callback function that is called directly from the
+ * interrupt routine whenever there is a data packet available. When
+ * this value is set to 1, you must use the function
+ * "rfm12_set_callback(your_function)" to point to your
+ * callback function in order to receive packets.
+ */
+#define RFM12_USE_RX_CALLBACK 0
+
+/************************
+ * RFM12BP support (high power version of RFM12)
+ */
+
+//To use RFM12BP, which needs control signals for RX enable and TX enable,
+//use these defines (set to your pinout of course).
+//The TX-Part can also be used to control a TX-LED with the nomral RFM12
+/*
+ #define RX_INIT_HOOK  DDRD |= _BV(PD5)
+ #define RX_LEAVE_HOOK PORTD &= ~_BV(PD5)
+ #define RX_ENTER_HOOK PORTD |= _BV(PD5)
+
+ #define TX_INIT_HOOK  DDRD |= _BV(PD4)
+ #define TX_LEAVE_HOOK PORTD &= ~_BV(PD4)
+ #define TX_ENTER_HOOK PORTD |= _BV(PD4)
+ */
+
+/************************
+ * UART DEBUGGING
+ * en- or disable debugging via uart.
+ */
+
+#define RFM12_UART_DEBUG 0
+
+#endif // ENABLE_GPL_RFM12B
+//--
+#ifdef ENABLE_MIRF24
+//Define the pin on change interrupt which you connect to nIRQ of NRF24 module.
+// - it can be between 0 and 23 on 28pin devices,
+// - and       between 0 and 31 on 40pin devices (look at your device's pinout).
+//#define mirf_PCINT 0
+// define CE pin (selecting RX/TX mode) - any digital pin on microcontroller
+#define mirf_CE_DDR  DDRC
+#define mirf_CE_PORT PORTC
+#define mirf_CE_PIN  PC6
+// define CSN (SPI chip select for NRF24 module) - any digital pin on microcontroller
+#define mirf_CSN_DDR  DDRC
+#define mirf_CSN_PORT PORTC
+#define mirf_CSN_PIN  PC7
+
+#define mirf_CHANNEL 2
+#define mirf_PAYLOAD 16
+
+#define mirf_ADDR_LEN	5
+#define mirf_CONFIG ((1<<RF24_EN_CRC) | (0<<RF24_CRCO) )
+
+#endif // ENABLE_MIRF24
+
 // ============ END USER ZONE --- NO EDITING ALLOWED!       ====================
 // = ************************************************************************* =
 // ============ DON'T MAKE MODIFICATIONS BELLOW THIS BORDER ====================
@@ -591,7 +842,7 @@ void onboard_led_enable(void);
 void onboard_led_on(void);
 void onboard_led_off(void);
 void onboard_led_toggle(void);
-
+//--
 #ifdef ENABLE_MILLIS
 #ifdef ENABLE_NB_DELAYS
 #error "Non blocking delays conflicts with millis"
@@ -668,7 +919,9 @@ volatile uint8_t SPI_TC;
 
 #define MISO      PB6
 #define MISO_PORT PORTB
-// no need for MISO_DDR, as is set automatically as input
+#define MISO_PIN  PINB
+#define MISO_DDR  DDRB
+// no to set MISO_DDR on hardware SPI, as is set automatically as input
 
 #define SS      PB4
 #define SS_PORT PORTB
@@ -685,7 +938,9 @@ volatile uint8_t SPI_TC;
 
 #define MISO      PB3
 #define MISO_PORT PORTB
-// no need for MISO_DDR, as is set automatically as input
+#define MISO_PIN  PINB
+#define MISO_DDR  DDRB
+// no need to set MISO_DDR on hardware SPI, as is set automatically as input
 
 #define SS      PB0
 #define SS_PORT PORTB
@@ -707,7 +962,9 @@ volatile uint8_t SPI_TC;
 
 #define MISO      PB4
 #define MISO_PORT PORTB
-// no need for MISO_DDR, as is set automatically as input
+#define MISO_PIN  PINB
+#define MISO_DDR  DDRB
+// no need to set MISO_DDR on hardware SPI, as is set automatically as input
 
 #define SS      PB2
 #define SS_PORT PORTB
@@ -942,24 +1199,24 @@ void F32_freeMemoryUpdate(uint8_t flag, uint32_t size);
  *
  * 	- Hardware connections:
 
-	RFM12B		|	ATMEGA328P	|	Other Hardware		|	ATMEGA1284P
-	------------------------------------------------------------------
-		GND		|	   GND		|						|	GND
-		VDD		|	   3.3V		|						|	3.3V
+ RFM12B		|	ATMEGA328P	|	Other Hardware		|	ATMEGA1284P
+ ------------------------------------------------------------------
+ GND		|	   GND		|						|	GND
+ VDD		|	   3.3V		|						|	3.3V
 
-		FSK		|	   NC		|						|	NC
-		CLK		|	   NC		|						|	NC
-		DCLK	|	   NC		|						|	NC
-		NIRQ	|	   NC		|						|	NC
-		NRES	|	   NC		|						|	NC
+ FSK		|	   NC		|						|	NC
+ CLK		|	   NC		|						|	NC
+ DCLK	|	   NC		|						|	NC
+ NIRQ	|	   NC		|						|	NC
+ NRES	|	   NC		|						|	NC
 
-		NSEL	|	   PB2		|						|	PB4
-		SCK		|	   PB5		|						|	PB7
-		SDI		|	   PB3		|						|	PB5
-		SDO		|	   PB4		|						|	PB6
+ NSEL	|	   PB2		|						|	PB4
+ SCK		|	   PB5		|						|	PB7
+ SDI		|	   PB3		|						|	PB5
+ SDO		|	   PB4		|						|	PB6
 
-				|	   PB1		| 	RED LED circuit		|	PC4
-				|	   PB0		| 	GREEN LED circuit	|	PC6
+ |	   PB1		| 	RED LED circuit		|	PC4
+ |	   PB0		| 	GREEN LED circuit	|	PC6
  *
  */
 
@@ -968,23 +1225,1261 @@ void F32_freeMemoryUpdate(uint8_t flag, uint32_t size);
 // different transmission speed (e.g., SD-Card)
 #define RF_SPI_LOW_SPEED SPCR = 0x50; SPSR = 0
 
-unsigned char volatile DATA_RDY2SND = 0;		// flag for indicating when to transmit data
-unsigned char volatile rf_buff[256], rf_rxbuff[256];	//provide some buffer for data
+unsigned char volatile DATA_RDY2SND = 0; // flag for indicating when to transmit data
+unsigned char volatile rf_buff[256], rf_rxbuff[256];//provide some buffer for data
 
-int volatile rf_buffindex = 0;			// index for keeping place in buffer
-unsigned char volatile rf_rxbuffindex = 0;			// index for keeping place in buffer
+int volatile rf_buffindex = 0;// index for keeping place in buffer
+unsigned char volatile rf_rxbuffindex = 0;// index for keeping place in buffer
 
 /*inline void timeout_init(void);
-inline uint8_t timeout(void);
-uint8_t rf12_is_ready(void);
-uint16_t rf12_trans(uint16_t to_send);
-void rf12_txbyte(uint8_t b);
-uint8_t rf12_rxbyte(void);*/
+ inline uint8_t timeout(void);
+ uint8_t rf12_is_ready(void);
+ uint16_t rf12_trans(uint16_t to_send);
+ void rf12_txbyte(uint8_t b);
+ uint8_t rf12_rxbyte(void);*/
 void radio_config(void);
 void radio_send(uint8_t volatile * buffer, uint8_t len);
 int16_t radio_rcv(uint8_t volatile * buffer, uint8_t max_len);
 
 #endif
+//--
+#ifdef ENABLE_GPL_RFM12B
+/************************
+ * VARIOUS RFM RELATED DEFINES FOR INTERNAL USE
+ *(defines which shall be visible to the user are located in rfm12.h)
+ */
+
+//default preamble (altrernating 1s and 0s)
+#define PREAMBLE 0xAA
+
+//default synchronization pattern
+#define SYNC_MSB 0x2D
+#define SYNC_LSB 0xD4
+
+//these are the states for the receive/transmit state machine
+#define STATE_RX_IDLE 0
+#define STATE_RX_ACTIVE 1
+#define STATE_TX 2
+#define STATE_POWER_DOWN 3
+
+//packet header length in bytes
+#define PACKET_OVERHEAD 3
+
+/************************
+ * LIBRARY DEFAULT SETTINGS
+ */
+
+#ifdef PWRMGT_DEFAULT
+#warning "You are using the PWRMGT_DEFAULT makro directly in your rfm12_config.h - this is no longer supported."
+#warning "RFM12_USE_WAKEUP_TIMER and RFM12_LOW_BATT_DETECTOR care about this on their own now. just remove PWRMGT_DEFAULT if you needed it for that."
+#warning "if you need the clock output, use the new RFM12_USE_CLOCK_OUTPUT instead!"
+#undef PWRMGT_DEFAULT
+#endif
+
+//if notreturns is not defined, we won't use this feature
+#ifndef RFM12_NORETURNS
+#define RFM12_NORETURNS 0
+#endif
+
+//if transmit only is not defined, we won't use this feature
+#ifndef RFM12_TRANSMIT_ONLY
+#define RFM12_TRANSMIT_ONLY 0
+#endif
+
+//if transmit only is on, we need to turn of collision detection
+#if RFM12_TRANSMIT_ONLY
+//disable collision detection, as we won't be able to receive data
+#ifdef RFM12_NOCOLLISIONDETECTION
+#undef RFM12_NOCOLLISIONDETECTION
+#endif
+#define RFM12_NOCOLLISIONDETECTION 1
+#endif
+
+//if nocollisiondetection is not defined, we won't use this feature
+#ifndef RFM12_NOCOLLISIONDETECTION
+#define RFM12_NOCOLLISIONDETECTION 0
+#endif
+
+//if livectrl is not defined, we won't use this feature
+#ifndef RFM12_LIVECTRL
+#define RFM12_LIVECTRL 0
+#endif
+
+//if low battery detector is not defined, we won't use this feature
+#ifndef RFM12_LOW_BATT_DETECTOR
+#define RFM12_LOW_BATT_DETECTOR 0
+#endif
+
+#ifndef RFM12_USE_CLOCK_OUTPUT
+#define RFM12_USE_CLOCK_OUTPUT 0
+#endif
+
+#if RFM12_USE_CLOCK_OUTPUT
+//Enable Xtal oscillator
+#define PWRMGMT_CLCKOUT (RFM12_PWRMGT_EX)
+#else
+//Disable Clock output
+#define PWRMGMT_CLCKOUT (RFM12_PWRMGT_DC)
+#endif
+
+//if the low battery detector feature is used, we will set some extra pwrmgmt options
+#if RFM12_LOW_BATT_DETECTOR
+//define PWRMGMT_LOW_BATT  with low batt detector
+//it will be used later
+#define PWRMGMT_LOW_BATT (RFM12_PWRMGT_EB)
+
+//check if the default power management setting has the LB bit set
+//and warn the user if it's not
+#ifdef PWRMGT_DEFAULT
+#if !((PWRMGT_DEFAULT) & RFM12_PWRMGT_EB)
+#warning "You are using the RFM12 low battery detector, but PWRMGT_DEFAULT has the low battery detector bit unset."
+#endif
+#endif
+#else
+#define PWRMGMT_LOW_BATT 0
+#endif /* RFM12_LOW_BATT_DETECTOR */
+
+//if wakeuptimer is not defined, we won't use this feature
+#ifndef RFM12_USE_WAKEUP_TIMER
+#define RFM12_USE_WAKEUP_TIMER 0
+#endif
+
+//if wakeuptimer is on, we will set the default power management to use the wakeup timer
+#if RFM12_USE_WAKEUP_TIMER
+//define PWRMGMT_LOW_BATT  with low batt detector
+//it will be used later
+#define PWRMGMT_WKUP (RFM12_PWRMGT_EW)
+
+//check if the default power management setting has the EW bit set
+//and warn the user if it's not
+#ifdef PWRMGT_DEFAULT
+#if !((PWRMGT_DEFAULT) & RFM12_PWRMGT_EW)
+#warning "You are using the RFM12 wakeup timer, but PWRMGT_DEFAULT has the wakeup timer bit unset."
+#endif
+#endif
+
+//enable powermanagement shadowing
+#define RFM12_PWRMGT_SHADOW 1
+#else
+#define PWRMGMT_WKUP 0
+#endif /* RFM12_USE_WAKEUP_TIMER */
+
+//if ASK tx is not defined, we won't use this feature
+#ifndef RFM12_TRANSMIT_ASK
+#define RFM12_TRANSMIT_ASK 0
+#endif
+
+//if receive ASK is not defined, we won't use this feature
+#ifndef RFM12_RECEIVE_ASK
+#define RFM12_RECEIVE_ASK 0
+#endif
+
+//if software spi is not defined, we won't use this feature
+#ifndef RFM12_SPI_SOFTWARE
+#define RFM12_SPI_SOFTWARE 0
+#endif
+
+//if uart debug is not defined, we won't use this feature
+#ifndef RFM12_UART_DEBUG
+#define RFM12_UART_DEBUG 0
+#endif
+
+#ifndef RFM12_PWRMGT_SHADOW
+#define RFM12_PWRMGT_SHADOW 0
+#endif
+
+//default value for powermanagement register
+#ifndef PWRMGT_DEFAULT
+#define PWRMGT_DEFAULT (PWRMGMT_CLCKOUT | PWRMGMT_WKUP | PWRMGMT_LOW_BATT)
+#endif
+
+//define a default receive power management mode
+#if RFM12_TRANSMIT_ONLY
+//the receiver is turned off by default in transmit only mode
+#define PWRMGT_RECEIVE (RFM12_CMD_PWRMGT | PWRMGT_DEFAULT)
+#else
+//the receiver is turned on by default in normal mode
+#define PWRMGT_RECEIVE (RFM12_CMD_PWRMGT | PWRMGT_DEFAULT | RFM12_PWRMGT_ER)
+#endif
+
+//default channel free time, if not defined elsewhere
+#ifndef CHANNEL_FREE_TIME
+#define CHANNEL_FREE_TIME 200
+#endif
+
+/*
+ * backward compatibility for the spi stuff
+ * these values weren't set in older revisions of this library
+ * so they're now assumed to be on the same pin/port.
+ * otherwise these defines serve to configure the software SPI ports
+ */
+/*
+ #ifndef DDR_MOSI
+ #define DDR_MOSI DDR_SPI
+ #define PORT_MOSI PORT_SPI
+ #endif
+
+ #ifndef DDR_MISO
+ #define DDR_MISO DDR_SPI
+ #define PIN_MISO PIN_SPI
+ #endif
+
+ #ifndef DDR_SCK
+ #define DDR_SCK DDR_SPI
+ #define PORT_SCK PORT_SPI
+ #endif
+
+ #ifndef DDR_SPI_SS
+ #define DDR_SPI_SS DDR_SPI
+ #define PORT_SPI_SS PORT_SPI
+ #endif
+ */
+
+/*
+ * backward compatibility for rf channel settings
+ * these values weren't set in the config in older revisions of this library
+ * so we assume defaults here.
+ */
+
+#ifndef RFM12_XTAL_LOAD
+#define                        RFM12_XTAL_LOAD RFM12_XTAL_11_5PF
+#endif
+
+#ifndef RFM12_POWER
+#define RFM12_POWER            RFM12_TXCONF_POWER_0
+#endif
+
+#ifndef FSK_SHIFT
+#define FSK_SHIFT 125000
+#endif
+
+#ifndef RFM12_RSSI_THRESHOLD
+#define RFM12_RSSI_THRESHOLD   RFM12_RXCTRL_RSSI_79
+#endif
+
+#ifndef RFM12_FILTER_BW
+#define RFM12_FILTER_BW        RFM12_RXCTRL_BW_400
+#endif
+
+#ifndef RFM12_LNA_GAIN
+#define RFM12_LNA_GAIN         RFM12_RXCTRL_LNA_6
+#endif
+
+#ifndef RFM12_LBD_VOLTAGE
+#define RFM12_LBD_VOLTAGE      RFM12_LBD_VOLTAGE_3V7
+#endif
+
+#ifndef RFM12_CLOCK_OUT_FREQUENCY
+#define RFM12_CLOCK_OUT_FREQUENCY RFM12_CLOCK_OUT_FREQUENCY_1_00_MHz
+#endif
+
+#ifndef RFM12_FREQUENCY
+#ifndef FREQ
+#error "RFM12_FREQUENCY not defined."
+#else
+#define RFM12_FREQUENCY FREQ
+#warning "using FREQ for RFM12_FREQUENCY. Please use RFM12_FREQUENCY in the future!"
+#endif
+#endif
+
+//baseband selection
+#if (RFM12_BASEBAND) == RFM12_BAND_433
+#define RFM12_FREQUENCY_CALC(x) RFM12_FREQUENCY_CALC_433(x)
+#elif (RFM12_BASEBAND) == RFM12_BAND_868
+#define RFM12_FREQUENCY_CALC(x) RFM12_FREQUENCY_CALC_868(x)
+#elif (RFM12_BASEBAND) == RFM12_BAND_915
+#define RFM12_FREQUENCY_CALC(x) RFM12_FREQUENCY_CALC_915(x)
+#else
+#error "Unsupported RFM12 baseband selected."
+#endif
+
+/************************
+ * HELPER MACROS
+ */
+
+//macros to turn the int on and off
+//if polling is used, just define these macros as empty
+#if !(RFM12_USE_POLLING)
+#define RFM12_INT_ON() RFM12_INT_MSK |= (1<<RFM12_INT_BIT)
+#define RFM12_INT_OFF() RFM12_INT_MSK &= ~(1<<RFM12_INT_BIT)
+#else
+#define RFM12_INT_ON()
+#define RFM12_INT_OFF()
+#endif /* !(RFM12_USE_POLLING) */
+
+/*
+ * the following macros help to manage the rfm12 fifo
+ * default fiforeset is as follows:
+ * 2 Byte Sync Pattern, disable sensitive reset, fifo filled interrupt at 8 bits
+ */
+//default fiforeset register value to accept data
+#define ACCEPT_DATA (RFM12_CMD_FIFORESET | RFM12_FIFORESET_DR | (8<<4) | RFM12_FIFORESET_FF)
+#define ACCEPT_DATA_INLINE (RFM12_FIFORESET_DR | (8<<4) | RFM12_FIFORESET_FF)
+//default fiforeset register value to clear fifo
+#define CLEAR_FIFO (RFM12_CMD_FIFORESET | RFM12_FIFORESET_DR | (8<<4))
+#define CLEAR_FIFO_INLINE (RFM12_FIFORESET_DR | (8<<4))
+
+//this macro helps to encapsulate the return values, when noreturn is set to on
+#if (RFM12_NORETURNS)
+#define TXRETURN(a)
+#else
+#define TXRETURN(a) (a)
+#endif
+
+/** \name States for rx and tx buffers
+ * \anchor rxtx_states
+ * \see rfm12_rx_status() and rfm12_control_t
+ * @{
+ */
+//! Indicates that the buffer is free
+#define STATUS_FREE 0
+//! Indicates that the buffer is in use by the library
+#define STATUS_OCCUPIED 1
+//! Indicates that a receive buffer holds a complete transmission
+#define STATUS_COMPLETE 2
+//@}
+
+/** \name  Return values for rfm12_tx() and rfm12_start_tx()
+ * \anchor tx_retvals
+ * \see rfm12_tx() and rfm12_start_tx()
+ * @{
+ */
+//!  The packet data is longer than the internal buffer
+#define RFM12_TX_ERROR 0x02
+//! The transmit buffer is already occupied
+#define RFM12_TX_OCCUPIED 0x03
+//! The packet has been enqueued successfully
+#define RFM12_TX_ENQUEUED 0x80
+//@}
+
+/************************
+ * function protoypes
+ */
+
+//see rfm12.c for more documentation
+void rfm12_init(void);
+void rfm12_tick(void);
+
+#if RFM12_USE_RX_CALLBACK
+/* set the callback function pointer */
+void rfm12_set_callback ((*in_func)(uint8_t, uint8_t *));
+#endif
+//if receive mode is not disabled (default)
+#if !(RFM12_TRANSMIT_ONLY)
+void rfm12_rx_clear(void);
+#endif /* !(RFM12_TRANSMIT_ONLY) */
+
+//FIXME: the tx function should return a status, do we need to do this also?
+// uint8_t rfm12_tx_status();
+
+#if (RFM12_NORETURNS)
+//see rfm12.c for more documentation
+void rfm12_start_tx(uint8_t type, uint8_t length);
+#if !(RFM12_SMALLAPI)
+void rfm12_tx(uint8_t len, uint8_t type, uint8_t *data);
+#endif
+#else
+uint8_t rfm12_start_tx(uint8_t type, uint8_t length);
+#if !(RFM12_SMALLAPI)
+uint8_t rfm12_tx(uint8_t len, uint8_t type, uint8_t *data);
+#endif
+#endif
+
+//if polling is used, define a polling function
+#if RFM12_USE_POLLING
+void rfm12_poll(void);
+#endif
+
+/************************
+ * private control structs
+ */
+
+//! The transmission buffer structure.
+/** \note Note that this complete buffer is transmitted sequentially,
+ * beginning with the sync bytes.
+ *
+ * \see rfm12_start_tx(), rfm12_tx() and rf_tx_buffer
+ */
+typedef struct {
+	//! Sync bytes for receiver to start filling fifo.
+	uint8_t sync[2];
+
+	//! Length byte - number of bytes in buffer.
+	uint8_t len;
+
+	//! Type field for the simple airlab protocol.
+	uint8_t type;
+
+	//! Checksum over the former two members.
+	uint8_t checksum;
+
+	//! Buffer for the raw bytes to be transmitted.
+	uint8_t buffer[RFM12_TX_BUFFER_SIZE];
+} rf_tx_buffer_t;
+
+//if receive mode is not disabled (default)
+#if !(RFM12_TRANSMIT_ONLY)
+//! The receive buffer structure.
+/** \note Note that there will be two receive buffers of this type,
+ * as double buffering is being employed by this library.
+ *
+ * \see rfm12_rx_status(), rfm12_rx_len(), rfm12_rx_type(), rfm12_rx_buffer() , rfm12_rx_clear() and rf_rx_buffers
+ */
+typedef struct {
+	//! Indicates if the buffer is free or completed.
+	/** \see \ref rxtx_states "States for rx and tx buffers" */
+	volatile uint8_t status;
+
+	//! Length byte - number of bytes in buffer.
+	uint8_t len;
+
+	//! Type field for the simple airlab protocol.
+	uint8_t type;
+
+	//! Checksum over the type and length header fields
+	uint8_t checksum;
+
+	//! The actual receive buffer data
+	uint8_t buffer[RFM12_RX_BUFFER_SIZE];
+} rf_rx_buffer_t;
+#endif /* !(RFM12_TRANSMIT_ONLY) */
+
+//! Control and status structure.
+/** This data structure keeps all control and some status related variables. \n
+ * By using a central structure for all global variables, the compiler can
+ * use smaller instructions and reduce the size of the binary.
+ *
+ * \note Some states are defined in the non-documented rfm12_core.h header file.
+ * \see ISR(RFM12_INT_VECT, ISR_NOBLOCK), rfm12_tick() and ctrl
+ */
+typedef struct {
+	//! This controls the library internal state machine.
+	volatile uint8_t rfm12_state;
+
+	//! Transmit buffer status.
+	/** \see \ref rxtx_states "States for rx and tx buffers" */
+	volatile uint8_t txstate;
+
+	//! Number of bytes to transmit or receive.
+	/** This refers to the overall data size, including header data and sync bytes. */
+	uint8_t num_bytes;
+
+	//! Counter for the bytes we are transmitting or receiving at the moment.
+	uint8_t bytecount;
+
+	//if receive mode is not disabled (default)
+#if !(RFM12_TRANSMIT_ONLY)
+	//! the number of the currently used in receive buffer.
+	uint8_t buffer_in_num;
+
+	//! the number of the currently used out receive buffer.
+	uint8_t buffer_out_num;
+#endif /* !(RFM12_TRANSMIT_ONLY) */
+
+#if RFM12_PWRMGT_SHADOW
+//! Power management shadow register.
+/** The wakeup timer feature needs to buffer the current power management state. */
+uint16_t pwrmgt_shadow;
+#endif
+
+#if RFM12_LOW_BATT_DETECTOR
+//! Low battery detector status.
+/** \see \ref batt_states "States for the low battery detection feature",
+ * as well as rfm12_set_batt_detector() and rfm12_get_batt_status()
+ */
+volatile uint8_t low_batt;
+#endif /* RFM12_LOW_BATT_DETECTOR */
+
+#if RFM12_USE_WAKEUP_TIMER
+//! Wakeup timer flag.
+/** The wakeup timer feature sets this flag from the interrupt on it's ticks */
+volatile uint8_t wkup_flag;
+#endif
+
+#if RFM12_LIVECTRL
+uint16_t rxctrl_shadow;
+uint16_t afc_shadow;
+uint16_t txconf_shadow;
+uint16_t cfg_shadow;
+#endif
+} rfm12_control_t;
+
+/************************
+ * GLOBALS
+ */
+
+//Buffer and status for the message to be transmitted
+extern rf_tx_buffer_t rf_tx_buffer;
+
+//if receive mode is not disabled (default)
+#if !(RFM12_TRANSMIT_ONLY)
+//buffers for storing incoming transmissions
+extern rf_rx_buffer_t rf_rx_buffers[2];
+#endif /* !(RFM12_TRANSMIT_ONLY) */
+
+//the control struct
+extern rfm12_control_t ctrl;
+
+/************************
+ * INLINE FUNCTIONS
+ */
+
+//if receive mode is not disabled (default)
+#if !(RFM12_TRANSMIT_ONLY)
+//! Inline function to return the rx buffer status byte.
+/** \returns STATUS_FREE or STATUS_COMPLETE
+ * \see \ref rxtx_states "rx buffer states", rfm12_rx_len(), rfm12_rx_type(), rfm12_rx_buffer(), rfm12_rx_clear() and rf_rx_buffer_t
+ */
+static inline uint8_t rfm12_rx_status(void) {
+	return rf_rx_buffers[ctrl.buffer_out_num].status;
+}
+
+//! Inline function to return the rx buffer length field.
+/** \returns The length of the data inside the buffer
+ * \see rfm12_rx_status(), rfm12_rx_type(), rfm12_rx_buffer(), rfm12_rx_clear() and rf_rx_buffer_t
+ */
+static inline uint8_t rfm12_rx_len(void) {
+	return rf_rx_buffers[ctrl.buffer_out_num].len;
+}
+
+//! Inline function to return the rx buffer type field.
+/** \returns The packet type from the packet header type field
+ * \see rfm12_rx_status(), rfm12_rx_len(), rfm12_rx_buffer(), rfm12_rx_clear() and rf_rx_buffer_t
+ */
+static inline uint8_t rfm12_rx_type(void) {
+	return rf_rx_buffers[ctrl.buffer_out_num].type;
+}
+
+//! Inline function to retreive current rf buffer contents.
+/** \returns A pointer to the current receive buffer contents
+ * \see rfm12_rx_status(), rfm12_rx_len(), rfm12_rx_type(), rfm12_rx_clear() and rf_rx_buffer_t
+ */
+static inline uint8_t *rfm12_rx_buffer(void) {
+	return (uint8_t*) rf_rx_buffers[ctrl.buffer_out_num].buffer;
+}
+#endif /* !(RFM12_TRANSMIT_ONLY) */
+
+/************************
+ * amplitude modulation receive mode
+ */
+
+#if RFM12_RECEIVE_ASK
+/** \name States and buffer size for the amplitude modulated receive feature.
+ * \anchor ask_defines
+ * \note You need to define RFM12_RECEIVE_ASK as 1 to enable this.
+ * \see rfrxbuf_t and ISR(ADC_vect, ISR_NOBLOCK)
+ * @{
+ */
+//! The ASK receive buffer size.
+#define RFM12_ASK_RFRXBUF_SIZE 55
+//! The ASK receive buffer is empty.
+#define RFM12_ASK_STATE_EMPTY 0
+//! The ASK receive buffer is active.
+#define RFM12_ASK_STATE_RECEIVING 1
+//! The ASK receive buffer is full.
+#define RFM12_ASK_STATE_FULL 2
+//@}
+
+//! The receive buffer structure for the amplitude modulated receive feature.
+/** \note You need to define RFM12_RECEIVE_ASK as 1 to enable this.
+ * \see ask_rxbuf (for further usage instructions) and ISR(ADC_vect, ISR_NOBLOCK)
+ * \headerfile rfm12.h
+ */
+typedef struct {
+	//! A pointer into the buffer, used while receiving.
+	volatile uint8_t p;
+
+	//! The buffer's state.
+	/** \see See \ref ask_defines "ASK mode defines" for a list of possible states */
+	volatile uint8_t state;
+
+	//! The data buffer
+	uint8_t buf[RFM12_ASK_RFRXBUF_SIZE];
+}rfm12_rfrxbuf_t;
+
+//see rfm12_extra.c for more documentation
+extern rfm12_rfrxbuf_t ask_rxbuf;
+
+//see rfm12_extra.c for more documentation
+void adc_init(void);
+#endif /* RFM12_RECEIVE_ASK */
+
+/************************
+ * amplitude modulated raw tx mode
+ */
+
+#if RFM12_TRANSMIT_ASK
+//see rfm12_extra.c for more documentation
+void rfm12_ask_tx_mode(uint8_t setting);
+
+//see rfm12_extra.c for more documentation
+inline void rfm12_tx_on(void);
+
+//see rfm12_extra.c for more documentation
+inline void rfm12_tx_off(void);
+#endif /* RFM12_TRANSMIT_ASK  */
+
+/************************
+ * rfm12 wakeup timer mode
+ */
+
+#if RFM12_USE_WAKEUP_TIMER
+//this function sets the wakeup timer register
+//(see datasheet for values)
+//see rfm12_extra.c for more documentation
+void rfm12_set_wakeup_timer(uint16_t val);
+#endif /* RFM12_USE_WAKEUP_TIMER */
+
+#if RFM12_USE_POWER_CONTROL
+void rfm12_power_down();
+void rfm12_power_up();
+#endif
+
+/************************
+ * rfm12 low battery detector mode
+ */
+
+#if RFM12_LOW_BATT_DETECTOR
+/**\name States for the low battery detection feature.
+ * \anchor batt_states
+ * \see rfm12_set_batt_detector() and rfm12_get_batt_status()
+ * @{
+ */
+//! Battery voltage is okay.
+#define RFM12_BATT_OKAY 0
+//! Low battery voltage detected.
+#define RFM12_BATT_LOW 1
+//@}
+
+//this function sets the low battery detector and microcontroller clock divider register
+//(see datasheet for values)
+//see rfm12_extra.c for more documentation
+void rfm12_set_batt_detector(uint16_t val);
+
+//return the battery status
+//see rfm12_extra.c for more documentation
+uint8_t rfm12_get_batt_status(void);
+#endif /* RFM12_LOW_BATT_DETECTOR */
+
+typedef struct {
+	uint16_t rfm12_hw_command; //actual SPI command for rfm12
+	uint16_t rfm12_hw_parameter_mask; //mask that selects valid bits for this parameter
+	uint16_t *shadow_register; //pointer to the shadow register to be used for this command
+	uint16_t current_value;
+
+#if RFM12_LIVECTRL_CLIENT
+//these are for the client
+uint16_t min_val;
+uint16_t max_val;
+int16_t step;
+char *name;
+void (*to_string)(char *str, uint16_t value);
+#endif
+} livectrl_cmd_t;
+
+extern livectrl_cmd_t livectrl_cmds[];
+
+//these constants have to be in the same order as the elemts in the table
+//livectrl_cmds
+#define RFM12_LIVECTRL_BASEBAND   0
+#define RFM12_LIVECTRL_XTAL_LOAD  1
+#define RFM12_LIVECTRL_FREQUENCY  2
+#define RFM12_LIVECTRL_DATARATE   3
+#define RFM12_LIVECTRL_TX_POWER   4
+#define RFM12_LIVECTRL_FSK_SHIFT  5
+#define RFM12_LIVECTRL_LNA        6
+#define RFM12_LIVECTRL_RSSI       7
+#define RFM12_LIVECTRL_FILTER_BW  8
+
+#define NUM_LIVECTRL_CMDS         9
+
+void rfm12_livectrl(uint8_t cmd, uint16_t value);
+
+void rfm12_save_settings();
+void rfm12_load_settings();
+
+#if RFM12_LIVECTRL_CLIENT
+void rfm12_livectrl_get_parameter_string(uint8_t cmd, char *str);
+#endif
+
+/* Configuration setting command
+ Bit el enables the internal data register.
+ Bit ef enables the FIFO mode. If ef=0 then DATA (pin 6) and DCLK (pin 7) are used for data and data clock output.
+ x3 x2 x1 x0 Crystal Load Capacitance [pF]
+ 0 0 0 0 8.5
+ 0 0 0 1 9.0
+ 0 0 1 0 9.5
+ 0 0 1 1 10.0
+ ....
+ 1 1 1 0 15.5
+ 1 1 1 1 16.0
+ */
+#	define RFM12_CMD_CFG 0x8000
+#	define RFM12_CFG_EL 0x80
+#	define RFM12_CFG_EF 0x40
+#	define RFM12_CFG_BAND_MASK 0x30
+#	define RFM12_BAND_315 0x00
+#	define RFM12_BAND_433 0x10
+#	define RFM12_BAND_868 0x20
+#	define RFM12_BAND_915 0x30
+
+#	define RFM12_CFG_XTAL_MASK 0x0F
+#	define RFM12_XTAL_8_5PF  0x00
+#	define RFM12_XTAL_9_0PF  0x01
+#	define RFM12_XTAL_9_5PF  0x02
+#	define RFM12_XTAL_10_0PF 0x03
+#	define RFM12_XTAL_10_5PF 0x04
+#	define RFM12_XTAL_11_0PF 0x05
+#	define RFM12_XTAL_11_5PF 0x06
+#	define RFM12_XTAL_12_0PF 0x07
+#	define RFM12_XTAL_12_5PF 0x08
+#	define RFM12_XTAL_13_0PF 0x09
+#	define RFM12_XTAL_13_5PF 0x0A
+#	define RFM12_XTAL_14_0PF 0x0B
+#	define RFM12_XTAL_14_5PF 0x0C
+#	define RFM12_XTAL_15_0PF 0x0D
+#	define RFM12_XTAL_15_5PF 0x0E
+#	define RFM12_XTAL_16_0PF 0x0F
+
+/*
+ 2. Power Management Command
+ Bit Function of the control bit Related blocks
+ er Enables the whole receiver chain RF front end, baseband, synthesizer, oscillator
+ ebb The receiver baseband circuit can be separately switched on Baseband
+ et Switches on the PLL, the power amplifier, and starts the
+ transmission (If TX register is enabled) Power amplifier, synthesizer, oscillator
+ es Turns on the synthesizer Synthesizer
+ ex Turns on the crystal oscillator Crystal oscillator
+ eb Enables the low battery detector Low battery detector
+ ew Enables the wake-up timer Wake-up timer
+ dc Disables the clock output (pin 8) Clock output buffer
+ */
+#define RFM12_CMD_PWRMGT 0x8200
+#define RFM12_PWRMGT_ER 0x80
+#define RFM12_PWRMGT_EBB 0x40
+#define RFM12_PWRMGT_ET 0x20
+#define RFM12_PWRMGT_ES 0x10
+#define RFM12_PWRMGT_EX 0x08
+#define RFM12_PWRMGT_EB 0x04
+#define RFM12_PWRMGT_EW 0x02
+#define RFM12_PWRMGT_DC 0x01
+
+/*
+ 3. Frequency Setting Command
+ Bit 15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 0 POR
+ 1 0 1 0 f11 f10 f9 f8 f7 f6 f5 f4 f3 f2 f1 f0 A680h
+ The 12-bit parameter F (bits f11 to f0) should be in the range
+ of 96 and 3903. When F value sent is out of range, the
+ previous value is kept. The synthesizer center frequency f0 can
+ be calculated as:
+ f0 = 10 * C1 * (C2 + F/4000) [MHz]
+ The constants C1 and C2 are determined by
+ the selected band as:
+ Band [MHz] C1 C2
+ 433		1 43
+ 868		2 43
+ 915		3 30
+
+ Frequency in 433 Band can be from 430.24MHz to 439.7575MHz in 2.5kHz increments.
+ */
+
+#define RFM12_CMD_FREQUENCY 0xA000
+#define RFM12_FREQUENCY_MASK 0x0FFF
+#define RFM12_FREQUENCY_CALC_433(f) (((f)-430000000UL)/2500UL)
+#define RFM12_FREQUENCY_CALC_868(f) (((f)-860000000UL)/5000UL)
+#define RFM12_FREQUENCY_CALC_915(f) (((f)-900000000UL)/7500UL)
+
+/*
+ 4. Data Rate Command
+ Bit 15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 0 POR
+ 1 1 0 0 0 1 1 0 cs r6 r5 r4 r3 r2 r1 r0 C623h
+ The actual bit rate in transmit mode and the expected bit rate of the received data stream in receive mode is determined by the 7-bit
+ parameter R (bits r6 to r0) and bit cs.
+ BR = 10000 / 29 / (R+1) / (1+cs*7) [kbps]
+ In the receiver set R according to the next function:
+ R = (10000 / 29 / (1+cs*7) / BR) – 1, where BR is the expected bit rate in kbps.
+ Apart from setting custom values, the standard bit rates from 600 bps to 115.2 kbps can be approximated with small error.
+ Data rate accuracy requirements:
+ Clock recovery in slow mode: ΔBR/BR < 1/(29*Nbit) Clock recovery in fast mode: ΔBR/BR < 3/(29*Nbit)
+ BR is the bit rate set in the receiver and ΔBR is the bit rate difference between the transmitter and the receiver. Nbit is the maximum
+ number of consecutive ones or zeros in the data stream. It is recommended for long data packets to include enough 1/0 and 0/1
+ transitions, and to be careful to use the same division ratio in the receiver and in the transmitter.
+ */
+
+#define RFM12_CMD_DATARATE 0xC600
+#define RFM12_DATARATE_CS 0x80
+//calculate setting for datarates >= 2700 Baud
+#define RFM12_DATARATE_CALC_HIGH(d) ((uint8_t)((10000000.0/29.0/d)-0.5))
+//calculate setting for datarates < 2700 Baud
+#define RFM12_DATARATE_CALC_LOW(d) (RFM12_DATARATE_CS|(uint8_t)((10000000.0/29.0/8.0/d)-0.5))
+#define RFM12_DATARATE_MASK 0x00ff
+
+/*
+ 5. Receiver Control Command
+ Bit 15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 0 POR
+ 1 0 0 1 0 p16 d1 d0 i2 i1 i0 g1 g0 r2 r1 r0 9080h
+ Bit 10 (p16): pin16 function select
+
+ p16 Function of pin 16
+ 0 Interrupt input
+ 1 VDI output
+
+ Bits 9-8 (d1 to d0): VDI (valid data indicator) signal response time setting:
+ d1 d0 Response
+ 0 0 Fast
+ 0 1 Medium
+ 1 0 Slow
+ 1 1 Always on
+
+ Bits 7-5 (i2 to i0): Receiver baseband bandwidth (BW) select:
+ i2 i1 i0 BW [kHz]
+ 0 0 0 reserved
+ 0 0 1 400
+ 0 1 0 340
+ 0 1 1 270
+ 1 0 0 200
+ 1 0 1 134
+ 1 1 0 67
+ 1 1 1 reserved
+ Bits 4-3 (g1 to g0): LNA gain select:
+ g1 g0 relative to maximum [dB]
+ 0 0 0
+ 0 1 -6
+ 1 0 -14
+ 1 1 -20
+
+ Bits 2-0 (r2 to r0): RSSI detector threshold:
+ r2 r1 r0 RSSIsetth [dBm]
+ 0 0 0 -103
+ 0 0 1 -97
+ 0 1 0 -91
+ 0 1 1 -85
+ 1 0 0 -79
+ 1 0 1 -73
+ 1 1 0 Reserved
+ 1 1 1 Reserved
+ The RSSI threshold depends on the LNA gain, the real RSSI threshold can be calculated:
+ RSSIth=RSSIsetth+GLNA
+
+ */
+
+#define RFM12_CMD_RXCTRL 0x9000
+#define RFM12_RXCTRL_P16_VDI 0x400
+#define RFM12_RXCTRL_VDI_FAST 0x000
+#define RFM12_RXCTRL_VDI_MEDIUM 0x100
+#define RFM12_RXCTRL_VDI_SLOW 0x200
+#define RFM12_RXCTRL_VDI_ALWAYS_ON 0x300
+
+#define RFM12_RXCTRL_BW_MASK 0xE0
+#define RFM12_RXCTRL_BW_400 0x20
+#define RFM12_RXCTRL_BW_340 0x40
+#define RFM12_RXCTRL_BW_270 0x60
+#define RFM12_RXCTRL_BW_200 0x80
+#define RFM12_RXCTRL_BW_134 0xA0
+#define RFM12_RXCTRL_BW_67 0xC0
+
+#define RFM12_RXCTRL_LNA_MASK 0x18
+#define RFM12_RXCTRL_LNA_0 0x00
+#define RFM12_RXCTRL_LNA_6 0x08
+#define RFM12_RXCTRL_LNA_14 0x10
+#define RFM12_RXCTRL_LNA_20 0x18
+
+#define RFM12_RXCTRL_RSSI_103 0x00
+#define RFM12_RXCTRL_RSSI_97 0x01
+#define RFM12_RXCTRL_RSSI_91 0x02
+#define RFM12_RXCTRL_RSSI_85 0x03
+#define RFM12_RXCTRL_RSSI_79 0x04
+#define RFM12_RXCTRL_RSSI_73 0x05
+#define RFM12_RXCTRL_RSSI_67 0x06
+#define RFM12_RXCTRL_RSSI_61 0x07
+#define RFM12_RXCTRL_RSSI_MASK 0x07
+
+/*
+ 6. Data Filter Command
+ Bit 15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 0 POR
+ 1 1 0 0 0 0 1 0 al ml 1 s 1 f2 f1 f0 C22Ch
+
+ Bit 7 (al): Clock recovery (CR) auto lock control, if set.
+ CR will start in fast mode, then after locking it will automatically switch to slow mode.
+
+ Bit 6 (ml): Clock recovery lock control
+ 1: fast mode, fast attack and fast release (4 to 8 bit preamble (1010...) is recommended)
+ 0: slow mode, slow attack and slow release (12 to 16 bit preamble is recommended)
+ Using the slow mode requires more accurate bit timing (see Data Rate Command).
+
+ Bits 4 (s): Select the type of the data filter:
+ s Filter Type
+ 0 Digital filter
+ 1 Analog RC filter
+ Digital: This is a digital realization of an analog RC filter followed by a comparator with hysteresis. The time constant is
+ automatically adjusted to the bit rate defined by the Data Rate Command.
+ Note: Bit rate can not exceed 115 kpbs in this mode.
+ Analog RC filter: The demodulator output is fed to pin 7 over a 10 kOhm resistor. The filter cut-off frequency is set by the
+ external capacitor connected to this pin and VSS.
+
+ Bits 2-0 (f2 to f0): DQD threshold parameter.
+ Note: To let the DQD report "good signal quality" the threshold parameter should be 4 in cases where the bitrate is close to the
+ deviation. At higher deviation/bitrate settings, a higher threshold parameter can report "good signal quality" as well.
+ */
+
+#define RFM12_CMD_DATAFILTER 0xC228
+#define RFM12_DATAFILTER_AL 0x80
+#define RFM12_DATAFILTER_ML 0x40
+#define RFM12_DATAFILTER_S 0x10
+
+/*
+ 7. FIFO and Reset Mode Command
+ Bit 15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 0 POR
+ 1 1 0 0 1 0 1 0 f3 f2 f1 f0 sp al ff dr CA80h
+
+ Bits 7-4 (f3 to f0): FIFO IT level. The FIFO generates IT when the number of received data bits reaches this level.
+
+ Bit 3 (sp): Select the length of the synchron pattern:
+ sp		Byte1		Byte0 (POR) 	Synchron Pattern (Byte1+Byte0)
+ 0		2Dh			D4h				2DD4h
+ 1		Not used	D4h				D4h
+ Note: Byte0 can be programmed by the Synchron Pattern Command.
+
+ Bit 2 (al): Set the input of the FIFO fill start condition:
+ al
+ 0 Synchron pattern
+ 1 Always fill
+
+ Bit 1 (ff): FIFO fill will be enabled after synchron pattern reception. The FIFO fill stops when this bit is cleared.
+ Bit 0 (dr): Disables the highly sensitive RESET mode.
+
+ */
+#define RFM12_CMD_FIFORESET 0xCA00
+#define RFM12_FIFORESET_SP 0x08
+#define RFM12_FIFORESET_AL 0x04
+#define RFM12_FIFORESET_FF 0x02
+#define RFM12_FIFORESET_DR 0x01
+
+/*
+ 8. Synchron Pattern Command
+ Bit 15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 0 POR
+ 1 1 0 0 1 1 1 0 b7 b6 b5 b4 b3 b2 b1 b0 CED4h
+ The Byte0 used for synchron pattern detection can be reprogrammed by B <b7:b0>.
+ */
+#define RFM12_CMD_SYNCPATTERN 0xCE00
+
+/*
+ 9. Receiver FIFO Read Command
+ Bit 15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 0 POR
+ 1 0 1 1 0 0 0 0 0 0 0 0 0 0 0 0 B000h
+ With this command, the controller can read 8 bits from the receiver FIFO. Bit 6 (ef) must be set in Configuration Setting Command.
+
+ Note:: During FIFO access fSCK cannot be higher than fref /4, where fref is the crystal oscillator frequency. When the duty-cycle of the
+ clock signal is not 50 % the shorter period of the clock pulse width should be at least 2/fref .
+ */
+
+#define RFM12_CMD_READ 0xB000
+
+/*
+ 10. AFC Command
+ Bit 15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 0 POR
+ 1 1 0 0 0 1 0 0 a1 a0 rl1 rl0 st fi oe en C4F7h
+
+ Bit 7-6 (a1 to a0): Automatic operation mode selector:
+ a1 a0
+ 0 0 Auto mode off (Strobe is controlled by microcontroller)
+ 0 1 Runs only once after each power-up
+ 1 0 Keep the foffset only during receiving (VDI=high)
+ 1 1 Keep the foffset value independently from the state of the VDI signal
+
+ Bit 5-4 (rl1 to rl0): Range limit. Limits the value of the frequency offset register to the next values:
+ rl1 rl0 Max deviation
+ 0 0 No restriction (+63 fres to -64 fres)
+ 0 1 +15 fres to -16 fres
+ 1 0 +7 fres to -8 fres
+ 1 1 +3 fres to -4 fres
+ fres:
+ 433 MHz bands: 2.5 kHz
+ 868 MHz band: 5 kHz
+ 915 MHz band: 7.5 kHz
+
+ Bit 3 (st): Strobe edge, when st goes to high, the actual latest calculated frequency error is stored into the offset register of the AFC
+ block.
+ Bit 2 (fi): Switches the circuit to high accuracy (fine) mode. In this case, the processing time is about twice as long, but the measurement
+ uncertainty is about half.
+ Bit 1 (oe): Enables the frequency offset register. It allows the addition of the offset register to the frequency control word of the PLL.
+ Bit 0 (en): Enables the calculation of the offset frequency by the AFC circuit.
+
+ In automatic operation mode (no strobe signal is needed from the microcontroller to update the output offset register) the AFC circuit
+ is automatically enabled when the VDI indicates potential incoming signal during the whole measurement cycle and the circuit
+ measures the same result in two subsequent cycles.
+ There are three operation modes, examples from the possible application:
+ 1, (a1=0, a0=1) The circuit measures the frequency offset only once after power up. This way, extended TX-RX maximum distance
+ can be achieved.
+ Possible application:
+ In the final application, when the user inserts the battery, the circuit measures and compensates for the frequency offset caused by
+ the crystal tolerances. This method allows for the use of a cheaper quartz in the application and provides protection against tracking
+ an interferer.
+ 2a, (a1=1, a0=0) The circuit automatically measures the frequency offset during an initial effective low data rate pattern –easier to
+ receive- (i.e.: 00110011) of the package and changes the receiving frequency accordingly. The further part of the package can be
+ received by the corrected frequency settings.
+ 2b, (a1=1, a0=0) The transmitter must transmit the first part of the packet with a step higher deviation and later there is a possibility
+ of reducing it.
+ In both cases (2a and 2b), when the VDI indicates poor receiving conditions (VDI goes low), the output register is automatically
+ cleared. Use these settings when receiving signals from different transmitters transmitting in the same nominal frequencies.
+ 3, (a1=1, a0=1) It’s the same as 2a and 2b modes, but suggested to use when a receiver operates with only one transmitter. After a
+ complete measuring cycle, the measured value is kept independently of the state of the VDI signal.
+ */
+
+#define RFM12_CMD_AFC 0xC400
+#define RFM12_AFC_AUTO_OFF 0x00
+#define RFM12_AFC_AUTO_ONCE 0x40
+#define RFM12_AFC_AUTO_VDI 0x80
+#define RFM12_AFC_AUTO_KEEP 0xC0
+#define RFM12_AFC_LIMIT_OFF 0x00 /* 64 */
+#define RFM12_AFC_LIMIT_16 0x10
+#define RFM12_AFC_LIMIT_8 0x20
+#define RFM12_AFC_LIMIT_4 0x30
+#define RFM12_AFC_ST 0x08
+#define RFM12_AFC_FI 0x04
+#define RFM12_AFC_OE 0x02
+#define RFM12_AFC_EN 0x01
+
+/*
+ 11. TX Configuration Control Command
+ Bit 15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 0 POR
+ 1 0 0 1 1 0 0 mp m3 m2 m1 m0 0 p2 p1 p0 9800h
+
+ Bits 8-4 (mp, m3 to m0): FSK modulation parameters:
+ The resulting output frequency can be calculated as:
+ fout = f0 + (-1)SIGN * (M + 1) * (15 kHz)
+ where:
+ f0 is the channel center frequency (see the
+ Frequency Setting Command)
+ M is the four bit binary number <m3 : m0>
+ SIGN = (mp) XOR FSK
+
+ Bits 2-0 (p2 to p0): Output power:
+ p2 p1 p0 Relative Output Power [dB]
+ 0 0 0 0
+ 0 0 1 -2.5
+ 0 1 0 -5
+ 0 1 1 -7.5
+ 1 0 0 -10
+ 1 0 1 -12.5
+ 1 1 0 -15
+ 1 1 1 -17.5
+
+ */
+
+#define RFM12_CMD_TXCONF 0x9800
+#define RFM12_TXCONF_MP 0x100
+#define RFM12_TXCONF_POWER_0 	0x00
+#define RFM12_TXCONF_POWER_3 	0x01
+#define RFM12_TXCONF_POWER_6 	0x02
+#define RFM12_TXCONF_POWER_9 	0x03
+#define RFM12_TXCONF_POWER_12 	0x04
+#define RFM12_TXCONF_POWER_15   0x05
+#define RFM12_TXCONF_POWER_18 	0x06
+#define RFM12_TXCONF_POWER_21   0x07
+#define RFM12_TXCONF_FSK_MASK   0xf0
+#define RFM12_TXCONF_FS_CALC(f) (((f/15000UL)-1)<<4)
+#define RFM12_TXCONF_MASK 0x01F7
+#define RFM12_TXCONF_POWER_MASK 0x07
+
+/*
+ 12. PLL Setting Command
+ Bit 15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 0 POR
+ 1 1 0 0 1 1 0 0 0 ob1 ob0 0 ddy ddit 1 bw0 CC67h
+ Note: POR default setting of the register carefully selected to cover almost all typical applications.
+ Bit 6-5 (ob1-ob0): Microcontroller output clock buffer rise and fall time control.
+ ob1 ob0 Selected uC CLK frequency
+ 0 0 5 or 10 MHz (recommended)
+ 0 1 3.3 MHz
+ 1 X 2.5 MHz or less
+
+ (Typ conditions: Top = 27 oC; Vdd = Voc = 2.7 V, Crystal ESR = 30 Ohm)
+
+ Bit 3 (ddy): Switches on the delay in the phase detector when this bit is set.
+ Bit 2 (ddit): When set, disables the dithering in the PLL loop.
+ Bit 0 (bw0): PLL bandwidth can be set for optimal TX RF performance.
+
+ bw0		Max bit rate [kbps]		Phase noise at 1MHz offset [dBc/Hz]
+ 0		86.2					-107
+ 1		256						-102
+
+ Note: Needed for optimization of the RF
+ performance. Optimal settings can vary
+ according to the external load capacitance.
+ */
+
+#define RFM12_CMD_PLL	0xCC02
+#define RFM12_PLL_DDY	0x08
+#define RFM12_PLL_DDIT	0x04
+#define RFM12_PLL_BW0	0x01
+
+/*
+ 13. Transmitter Register Write Command
+ Bit 15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 0 POR
+ 1 0 1 1 1 0 0 0 t7 t6 t5 t4 t3 t2 t1 t0 B8AAh
+ With this command, the controller can write 8 bits (t7 to t0) to the transmitter data register. Bit 7 (el) must be set in Configuration
+ Setting Command.
+ */
+
+#define RFM12_CMD_TX 0xB800
+
+/*
+ 14. Wake-Up Timer Command
+ Bit 15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 0 POR
+ 1 1 1 r4 r3 r2 r1 r0 m7 m6 m5 m4 m3 m2 m1 m0 E196h
+ The wake-up time period can be calculated by (m7 to m0) and (r4 to r0):
+ Twake-up = 1.03 * M * 2R + 0.5 [ms]
+ Note:
+ • For continual operation the ew bit should be cleared and set at the end of every cycle.
+ • For future compatibility, use R in a range of 0 and 29.
+ */
+#define RFM12_CMD_WAKEUP 0xE000
+
+/*
+ 15. Low Duty-Cycle Command
+ Bit 15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 0 POR
+ 1 1 0 0 1 0 0 0 d6 d5 d4 d3 d2 d1 d0 en C80Eh
+ With this command, Low Duty-Cycle operation can be set in order to decrease the average power consumption in receiver mode.
+ The time cycle is determined by the Wake-Up Timer Command.
+ The Duty-Cycle can be calculated by using (d6 to d0) and M. (M is parameter in a Wake-Up Timer Command.)
+ Duty-Cycle= (D * 2 +1) / M *100%
+ The on-cycle is automatically extended while DQD indicates good received signal condition (FSK transmission is detected in the
+ frequency range determined by Frequency Setting Command plus and minus the baseband filter bandwidth determined by the
+ Receiver Control Command).
+ */
+#define RFM12_CMD_DUTYCYCLE 0xC800
+#define RFM12_DUTYCYCLE_ENABLE 0x01
+
+/*
+ 16. Low Battery Detector and Microcontroller Clock Divider Command
+ Bit 15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 0 POR
+ 1 1 0 0 0 0 0 0 d2 d1 d0 0 v3 v2 v1 v0 C000h
+ The 4 bit parameter (v3 to v0) represents the value V, which defines the threshold voltage Vlb of the detector:
+ Vlb= 2.25 + V * 0.1 [V]
+ Clock divider configuration:
+ Clock Output
+ Frequency [MHz]
+ 0 0 0 1
+ 0 0 1 1.25
+ 0 1 0 1.66
+ 0 1 1 2
+ 1 0 0 2.5
+ 1 0 1 3.33
+ 1 1 0 5
+ 1 1 1 10
+ d2 d1 d0
+ The low battery detector and the clock output can be enabled or disabled by bits eb and dc, respectively, using the Power
+ Management Command.
+ */
+#define RFM12_CMD_LBDMCD 0xC000
+
+#define RFM12_LBD_VOLTAGE_2V2 0
+#define RFM12_LBD_VOLTAGE_2V3 1
+#define RFM12_LBD_VOLTAGE_2V4 2
+#define RFM12_LBD_VOLTAGE_2V5 3
+#define RFM12_LBD_VOLTAGE_2V6 4
+#define RFM12_LBD_VOLTAGE_2V7 5
+#define RFM12_LBD_VOLTAGE_2V8 6
+#define RFM12_LBD_VOLTAGE_2V9 7
+#define RFM12_LBD_VOLTAGE_3V0 8
+#define RFM12_LBD_VOLTAGE_3V1 9
+#define RFM12_LBD_VOLTAGE_3V2 10
+#define RFM12_LBD_VOLTAGE_3V3 11
+#define RFM12_LBD_VOLTAGE_3V4 12
+#define RFM12_LBD_VOLTAGE_3V5 13
+#define RFM12_LBD_VOLTAGE_3V6 14
+#define RFM12_LBD_VOLTAGE_3V7 15
+
+#define RFM12_CLOCK_OUT_FREQUENCY_1_00_MHz  (0<<5)
+#define RFM12_CLOCK_OUT_FREQUENCY_1_25_MHz  (1<<5)
+#define RFM12_CLOCK_OUT_FREQUENCY_1_66_MHz  (2<<5)
+#define RFM12_CLOCK_OUT_FREQUENCY_2_00_MHz  (3<<5)
+#define RFM12_CLOCK_OUT_FREQUENCY_2_50_MHz  (4<<5)
+#define RFM12_CLOCK_OUT_FREQUENCY_3_33_MHz  (5<<5)
+#define RFM12_CLOCK_OUT_FREQUENCY_5_00_MHz  (6<<5)
+#define RFM12_CLOCK_OUT_FREQUENCY_10_00_MHz (7<<5)
+
+/*
+ 17. Status Read Command
+ The read command starts with a zero, whereas all other control commands start with a one. If a read command is identified, the
+ status bits will be clocked out on the SDO pin as follows:
+
+ bitnumber
+ 15	RGIT TX register is ready to receive the next byte (Can be cleared by Transmitter Register Write Command)
+ FFIT The number of data bits in the RX FIFO has reached the pre-programmed limit (Can be cleared by any of the
+ FIFO read methods)
+ 14	POR Power-on reset (Cleared after Status Read Command)
+ 13	RGUR TX register under run, register over write (Cleared after Status Read Command)
+ FFOV RX FIFO overflow (Cleared after Status Read Command)
+ 12	WKUP Wake-up timer overflow (Cleared after Status Read Command)
+ 11	EXT Logic level on interrupt pin (pin 16) changed to low (Cleared after Status Read Command)
+ 10	LBD Low battery detect, the power supply voltage is below the pre-programmed limit
+ 9	FFEM FIFO is empty
+ 8	ATS Antenna tuning circuit detected strong enough RF signal
+ RSSI The strength of the incoming signal is above the pre-programmed limit
+ 7	DQD Data quality detector output
+ 6	CRL Clock recovery locked
+ 5	ATGL Toggling in each AFC cycle
+ 4	OFFS(6) MSB of the measured frequency offset (sign of the offset value)
+ 3	OFFS(3) -OFFS(0) Offset value to be added to the value of the frequency control parameter (Four LSB bits)
+ 2
+ 1
+ 0
+ */
+
+#define RFM12_CMD_STATUS	0x0000
+#define RFM12_STATUS_RGIT	0x8000
+#define RFM12_STATUS_FFIT	0x8000
+#define RFM12_STATUS_POR	0x4000
+#define RFM12_STATUS_RGUR	0x2000
+#define RFM12_STATUS_FFOV	0x2000
+#define RFM12_STATUS_WKUP	0x1000
+#define RFM12_STATUS_EXT	0x0800
+#define RFM12_STATUS_LBD	0x0400
+#define RFM12_STATUS_FFEM	0x0200
+#define RFM12_STATUS_ATS	0x0100
+#define RFM12_STATUS_RSSI	0x0100
+#define RFM12_STATUS_DQD	0x0080
+#define RFM12_STATUS_CRL	0x0040
+#define RFM12_STATUS_ATGL	0x0020
+
+/* undocumented software reset command for the rf12
+ */
+#define RFM12_RESET		0xffff
+
+#endif // ENABLE_GPL_RFM12B
+//--
+#ifdef ENABLE_MIRF24
+#define mirf_csnHi        mirf_CSN_PORT |=  (1<<mirf_CSN_PIN);
+#define mirf_csnLow       mirf_CSN_PORT &= ~(1<<mirf_CSN_PIN);
+#define mirf_ceHi         mirf_CE_PORT  |=  (1<<mirf_CE_PIN);
+#define mirf_ceLow        mirf_CE_PORT  &= ~(1<<mirf_CE_PIN);
+
+uint8_t mirf_PTX;
+
+void mirf_init();
+void mirf_config();
+void mirf_send(uint8_t *value);
+void mirf_setRADDR(uint8_t * adr);
+void mirf_setTADDR(uint8_t * adr);
+uint8_t mirf_dataReady();
+uint8_t mirf_isSending();
+uint8_t mirf_rxFifoEmpty();
+uint8_t mirf_txFifoEmpty();
+void mirf_getData(uint8_t * data);
+uint8_t mirf_getStatus();
+
+void mirf_transmitSync(uint8_t *dataout,uint8_t len);
+void mirf_transferSync(uint8_t *dataout,uint8_t *datain,uint8_t len);
+void mirf_configRegister(uint8_t reg, uint8_t value);
+void mirf_readRegister(uint8_t reg, uint8_t * value, uint8_t len);
+void mirf_writeRegister(uint8_t reg, uint8_t * value, uint8_t len);
+void mirf_powerUpRx();
+void mirf_powerUpTx();
+void mirf_powerDown();
+void mirf_flushRx();
+
+#endif // ENABLE_MIRF24
 //--
 #ifdef ENABLE_ONE_WIRE
 #define OW_MATCH_ROM    0x55
@@ -1148,7 +2643,7 @@ void xprintf (const char* fmt, ...);
 void xprintf_P (const char* fmt, ...);
 void xsprintf (char* buff, const char* fmt, ...);
 void xsprintf_P (char* buff, const char* fmt, ...);
-void xfprintf (void (*func)(unsigned char), const char*	fmt, ...);
+void xfprintf (void (*func)(unsigned char), const char* fmt, ...);
 void put_dump (const void* buff, unsigned long addr, int len, int width);
 #define DW_CHAR		sizeof(char)
 #define DW_SHORT	sizeof(short)
@@ -1198,10 +2693,10 @@ void serial_putstr_f(int8_t *s); // send a string from Flash memory
 #define serial_puts_f(s__) serial_putstr_f((int8_t *)PSTR(s__))
 //void serial_putstr_e(uint8_t *s);   // send a string from EEPROM
 void serial_putint(int value);
-void serial_putU08(uint8_t value);// display a byte
-void serial_puthexU08(uint8_t value);// display a byte in hex value
-void serial_puthexU16(uint16_t value);// display a word in hex value
-void serial_puthexU32(uint32_t value);// display a double in hex value
+void serial_putU08(uint8_t value); // display a byte
+void serial_puthexU08(uint8_t value); // display a byte in hex value
+void serial_puthexU16(uint16_t value); // display a word in hex value
+void serial_puthexU32(uint32_t value); // display a double in hex value
 
 #define TX_NEWLINE {serial_putc(0x0d); serial_putc(0x0a);}
 // required by Dharmani's SD_Card functions...
@@ -1720,6 +3215,11 @@ void seg_select_digit(uint8_t, uint8_t);
 #endif //7-seg
 //--
 #ifdef ENABLE_PCF8583 //it requires Hardware or Software I2C
+#ifdef PCF8583_USE_TWI
+#ifndef ENABLE_TWI
+#error "This needs TWI so, uncomment ENABLE_TWI from library header"
+#endif
+#endif
 uint8_t PCF8583_read(uint8_t address);
 void PCF8583_write(uint8_t address, uint8_t data);
 uint8_t PCF8583_read_bcd(uint8_t address);
@@ -1747,42 +3247,43 @@ void PCF8583_set_alarm_date(uint8_t day, uint8_t month);
 #endif //ENABLE_PCF8583
 //Now, the following list of microcontrollers must meet some conditions:
 // 1. Must be supported by avr-gcc 4.7.2 and avr-libc 1.8 (svn 2291 or newer)
-// 2. Must be supported by avrdude.
-// It doesn't matter if there are more microcontrollers from the same family
-//  supported in Atmel Studio 6 - the ATmega-CLib must be portable (Linux,
-//  Mac OS X;  <rant>ATMEL, Visual Studio is your loss! But, if you want to program
-//  the IDE in C++, then Qt library and Qt Designer are the solution</rant>).
-// However, if the "user" will work exclusively in Atmel Studio 6, then is free
-//  to add the required microcontrollers.
+// 2. Must be supported by avrdude (well, some definitions can be added
+//    without problems - e.g., for ATmega88PA starting from ATmega88P).
 #if	(defined(__AVR_ATmega48__)   || \
-  defined(__AVR_ATmega88__)      || \
-  defined(__AVR_ATmega88P__)     || \
-  defined(__AVR_ATmega168__)     || \
-  defined(__AVR_ATmega168P__)    || \
-  defined(__AVR_ATmega328P__)    || \
-  defined(__AVR_ATmega16__)      || \
-  defined(__AVR_ATmega16A__)     || \
-  defined(__AVR_ATmega164P__)    || \
-  defined(__AVR_ATmega32__)      || \
-  defined(__AVR_ATmega32A__)     || \
-  defined(__AVR_ATmega324P__)    || \
-  defined(__AVR_ATmega324PA__)   || \
-  defined(__AVR_ATmega644__)     || \
-  defined(__AVR_ATmega644P__)    || \
-  defined(__AVR_ATmega1284P__)   || \
-  defined(__AVR_ATmega2560__)    || \
-  defined(__AVR_ATmega1280__))
+		defined(__AVR_ATmega48P__)     || \
+		defined(__AVR_ATmega48PA__)    || \
+		defined(__AVR_ATmega88__)      || \
+		defined(__AVR_ATmega88P__)     || \
+		defined(__AVR_ATmega88PA__)    || \
+		defined(__AVR_ATmega168__)     || \
+		defined(__AVR_ATmega168P__)    || \
+		defined(__AVR_ATmega168PA__)   || \
+		defined(__AVR_ATmega328P__)    || \
+		defined(__AVR_ATmega16__)      || \
+		defined(__AVR_ATmega16A__)     || \
+		defined(__AVR_ATmega164P__)    || \
+		defined(__AVR_ATmega32__)      || \
+		defined(__AVR_ATmega32A__)     || \
+		defined(__AVR_ATmega324P__)    || \
+		defined(__AVR_ATmega324PA__)   || \
+		defined(__AVR_ATmega644__)     || \
+		defined(__AVR_ATmega644P__)    || \
+		defined(__AVR_ATmega644PA__)   || \
+		defined(__AVR_ATmega1284P__)   || \
+		defined(__AVR_ATmega1284__)    || \
+		defined(__AVR_ATmega2560__)    || \
+		defined(__AVR_ATmega1280__))
 // Tested with: 168P, 328P, 644P
 // TODO: - add "complete" support for ATmega1280 - the last one supported
 //         by OptiBoot bootloader. Not so soon, as I don't have yet an
 //         Arduino Mega board for tests.
 #else
 // unsupported type
-#error "Processor type not supported in atmegaclib.c !"
+#error "Processor type not supported in atmegaclib2.c !"
 #endif
 
 #if !(F_CPU == 16000000)
-#error "Processor speed not supported in atmegaclib.c !"
+#error "Processor speed not supported in atmegaclib2.c !"
 #endif
 
 #endif // end file
