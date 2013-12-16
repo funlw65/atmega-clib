@@ -53,6 +53,7 @@
 #include <util/delay.h>
 #include <avr/pgmspace.h> // use it along with lcd_puts_f() to reduce RAM consumption
 #include <atmegaclib2.h>
+#include <atmegaclib2.c>
 
 uint16_t adcval1, adcval2;
 
