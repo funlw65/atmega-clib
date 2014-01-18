@@ -3,7 +3,6 @@
 	<name>ATmega2_DS18x20_Single</name>
 	<comment></comment>
 	<projects>
-		<project>ATmegaCLib2</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>

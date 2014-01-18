@@ -36,13 +36,6 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-//Enable the following definitions on "atmegaclib.h" header:
-//#define UART_BAUD_RATE     57600 // default is 57600
-//#define UART_BAUD_SELECT   (F_CPU / (UART_BAUD_RATE * 16L) - 1) //- don't touch
-//#define ENABLE_SERIAL_POLL // require CONVERSION, conflicts with SERIAL
-//#define ENABLE_FREQMEASURE   // it can use one of TIMER1, TIMER3, TIMER4, TIMER5
-//#define ENABLE_CONVERSION    // useful for Serial, LCD and 7SEG Display
-
 //For Arduino UNO and Sanguino we have only one pin for counting frequency.
 // which is PB0 for Arduino Uno and PD6 for Sanguino
 
@@ -51,9 +44,13 @@
 #endif
 
 #include <avr/io.h>
-#include <avr/interrupt.h>
+//#include <avr/interrupt.h>
 #include <stdlib.h> // use with dtostrf() function
-#include <atmegaclib2.h>
+#include "atmegaclib2.h"
+#include <conversion.c>
+#include <serial_poll.c>
+#include <serial_common.c>
+#include <freqmeasure.c>
 
 float sum = 0;
 int count = 0;

@@ -3,7 +3,6 @@
 	<name>ATmega2_F32_SDCard_Test</name>
 	<comment></comment>
 	<projects>
-		<project>ATmegaCLib2</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>

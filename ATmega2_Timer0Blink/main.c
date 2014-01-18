@@ -57,8 +57,8 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 //#include <util/delay.h>
-#include <atmegaclib2.h>
-
+#include "atmegaclib2.h"
+#include <nbdelays.c>
 
 
 void main(void) __attribute__((noreturn));
@@ -70,21 +70,30 @@ void main(void) {
 	// init the non_blocking delays
 	timer0_isr_init();
 	sei();
-	// set delays in milliseconds for every LED
+	// set and start the delays in milliseconds for every LED
 	set_delay(0, 250);
 	set_delay(1, 500);
 	set_delay(2, 750);
 	for(;;){
+		// check if delay 0 (250ms) expired
 		if(check_delay(0)){
+			// toggle the LED on pin D5
 			tbi(PORTD, 5);
+			// set and start the delay again
 			set_delay(0, 250);
 		}
+		// check if delay 1 (500ms) expired
 		if(check_delay(1)){
+			// toggle the LED on pin C6
 			tbi(PORTC, 6);
+			// set and start the delay again
 			set_delay(1, 500);
 		}
+		// check if delay 3 (750ms) expired
 		if(check_delay(2)){
+			// toggle the LED on pin C7
 			tbi(PORTC, 7);
+			// set and start the delay again
 			set_delay(2, 750);
 		}
 	}

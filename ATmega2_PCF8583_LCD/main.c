@@ -35,19 +35,12 @@
  */
 
 // Activate the following definitions on "atmegaclib2.h" header, not here:
-//#define UART_BAUD_RATE      57600 // default is 57600
-//#define UART_BAUD_SELECT    (F_CPU / (UART_BAUD_RATE * 16L) - 1)
-//#define ENABLE_SERIAL       // require CONVERSION, conflicts with SERIAL_POLL
+// Uncomment only one of these:
 //#define ENABLE_I2C_SOFTWARE // I2C software if you don't use TWI
 //#define ENABLE_TWI          // TWI if you don't use I2C software
-//#define ENABLE_CONVERSION   // useful for Serial, LCD and 7SEG Display
-//#define ENABLE_PCF8583      // require CONVERSION and I2C
-//#define ENABLE_LCD          // require CONVERSION
 
-// Bellow, but still in the user zone,
-// go define the required pins (I2C software) in the user zone
-// of the same header. Or, just activate the USE_TWI definition for PCF8583 to
-// be able to use TWI - this way, other pin definitions are not required.
+// And define the required pins (I2C software) in the user zone
+// of the same header. Or, just use TWI - this way, other pin definitions are not required.
 
 // Then chose what pins you will use for LCD.
 
@@ -71,7 +64,17 @@
 #include <util/delay.h>
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
-#include <atmegaclib2.h>
+#include "atmegaclib2.h"
+#include <conversion.c>
+#include <serial.c>
+#include <serial_common.c>
+#ifdef ENABLE_TWI
+#include <twi.c>
+#else
+#include <i2c.c>
+#endif
+#include <pcf8583.c>
+#include <lcd.c>
 
 uint8_t month, day, hour, min, sec, hsec, buff_index;
 uint16_t year;
@@ -82,8 +85,9 @@ void main(void) __attribute__((noreturn));
 void main(void) {
 	//
 	serial_init(); // interrupt based USART communication
-	//Enable the following (one) line if you use TWI instead of I2C_Software
+#ifdef ENABLE_TWI
 	TWI_init();
+#endif
 	//
 	PCF8583_init();
 	// activate interrupts

@@ -5,11 +5,11 @@
 			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="de.innot.avreclipse.configuration.app.release.653613594" moduleId="org.eclipse.cdt.core.settings" name="Release">
 				<externalSettings/>
 				<extensions>
-					<extension id="org.eclipse.cdt.core.ELF" point="org.eclipse.cdt.core.BinaryParser"/>
 					<extension id="org.eclipse.cdt.core.MakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
 					<extension id="org.eclipse.cdt.core.GCCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
 					<extension id="org.eclipse.cdt.core.GASErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
 					<extension id="org.eclipse.cdt.core.GLDErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.ELF" point="org.eclipse.cdt.core.BinaryParser"/>
 				</extensions>
 			</storageModule>
 			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
@@ -30,10 +30,11 @@
 							<tool id="de.innot.avreclipse.tool.compiler.winavr.app.release.567754817" name="AVR Compiler" superClass="de.innot.avreclipse.tool.compiler.winavr.app.release">
 								<option id="de.innot.avreclipse.compiler.option.debug.level.2029036934" name="Generate Debugging Info" superClass="de.innot.avreclipse.compiler.option.debug.level" value="de.innot.avreclipse.compiler.option.debug.level.none" valueType="enumerated"/>
 								<option id="de.innot.avreclipse.compiler.option.optimize.1135469522" name="Optimization Level" superClass="de.innot.avreclipse.compiler.option.optimize" value="de.innot.avreclipse.compiler.optimize.size" valueType="enumerated"/>
-								<option id="de.innot.avreclipse.compiler.option.incpath.1594915657" superClass="de.innot.avreclipse.compiler.option.incpath" valueType="includePath">
+								<option id="de.innot.avreclipse.compiler.option.incpath.1594915657" name="Include Paths (-I)" superClass="de.innot.avreclipse.compiler.option.incpath" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ATmegaCLib2}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ATmega2_ADC_on_7SEG}&quot;"/>
 								</option>
-								<option id="de.innot.avreclipse.compiler.option.optimize.other.214646641" superClass="de.innot.avreclipse.compiler.option.optimize.other" value="-fdata-sections -ffunction-sections -fwhole-program -mrelax" valueType="string"/>
+								<option id="de.innot.avreclipse.compiler.option.optimize.other.214646641" name="Other Optimization Flags" superClass="de.innot.avreclipse.compiler.option.optimize.other" value="-fdata-sections -ffunction-sections -fwhole-program -mrelax" valueType="string"/>
 								<inputType id="de.innot.avreclipse.compiler.winavr.input.1514617851" name="C Source Files" superClass="de.innot.avreclipse.compiler.winavr.input"/>
 							</tool>
 							<tool id="de.innot.avreclipse.tool.cppcompiler.app.release.1625490284" name="AVR C++ Compiler" superClass="de.innot.avreclipse.tool.cppcompiler.app.release">
@@ -41,13 +42,9 @@
 								<option id="de.innot.avreclipse.cppcompiler.option.optimize.1019215861" name="Optimization Level" superClass="de.innot.avreclipse.cppcompiler.option.optimize" value="de.innot.avreclipse.cppcompiler.optimize.size" valueType="enumerated"/>
 							</tool>
 							<tool id="de.innot.avreclipse.tool.linker.winavr.app.release.1600096307" name="AVR C Linker" superClass="de.innot.avreclipse.tool.linker.winavr.app.release">
-								<option id="de.innot.avreclipse.linker.option.libs.2090636882" superClass="de.innot.avreclipse.linker.option.libs" valueType="libs">
-									<listOptionValue builtIn="false" value="ATmegaCLib2"/>
-								</option>
-								<option id="de.innot.avreclipse.linker.option.libpath.2095832661" superClass="de.innot.avreclipse.linker.option.libpath" valueType="stringList">
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/ATmegaCLib2/Release}&quot;"/>
-								</option>
-								<option id="de.innot.avreclipse.linker.option.otherlinkargs.498825070" superClass="de.innot.avreclipse.linker.option.otherlinkargs" value="-mrelax -Wl,--gc-sections" valueType="string"/>
+								<option id="de.innot.avreclipse.linker.option.libs.2090636882" name="Libraries (-l)" superClass="de.innot.avreclipse.linker.option.libs"/>
+								<option id="de.innot.avreclipse.linker.option.libpath.2095832661" name="Libraries Path (-L)" superClass="de.innot.avreclipse.linker.option.libpath"/>
+								<option id="de.innot.avreclipse.linker.option.otherlinkargs.498825070" name="Other Arguments" superClass="de.innot.avreclipse.linker.option.otherlinkargs" value="-mrelax -Wl,--gc-sections" valueType="string"/>
 								<inputType id="de.innot.avreclipse.tool.linker.input.1698702002" name="OBJ Files" superClass="de.innot.avreclipse.tool.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
 									<additionalInput kind="additionalinput" paths="$(LIBS)"/>

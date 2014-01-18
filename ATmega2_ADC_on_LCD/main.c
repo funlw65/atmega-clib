@@ -36,14 +36,11 @@
  */
 
 /*
-//Enable the following definitions on "atmegaclib2.h" header:
+ *  Now the project have his own atmegaclib2.h header.
+ */
 
-#define ENABLE_ADC        // analog to digital converter
-#define ENABLE_CONVERSION // useful for Serial, LCD and 7SEG Display
-#define ENABLE_LCD        // require CONVERSION
-
-//Then, define the pins for LCD in the user zone, on the same header.
-
+/*
+ *  A schematic and an article to be written ...
  */
 
 #ifndef F_CPU
@@ -52,8 +49,10 @@
 #include <avr/io.h>
 #include <util/delay.h>
 #include <avr/pgmspace.h> // use it along with lcd_puts_f() to reduce RAM consumption
-#include <atmegaclib2.h>
-#include <atmegaclib2.c>
+#include "atmegaclib2.h"
+#include <conversion.c>
+#include <adc.c>
+#include <lcd.c>
 
 uint16_t adcval1, adcval2;
 

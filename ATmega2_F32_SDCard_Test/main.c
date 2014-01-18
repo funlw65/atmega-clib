@@ -38,16 +38,7 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-// Activate the following definitions on "atmegaclib2.h" header, not here:
-//#define UART_BAUD_RATE      57600 // default is 57600
-//#define UART_BAUD_SELECT    (F_CPU / (UART_BAUD_RATE * 16L) - 1)
-//#define ENABLE_SERIAL       // require CONVERSION, conflicts with SERIAL_POLL
-//#define ENABLE_CONVERSION   // useful for Serial, LCD and 7SEG Display
-//#define ENABLE_SPI          // hardware SPI (master)
-//#define ENABLE_SD_CARD      // raw SD Card operations; require SPI
-//#define ENABLE_FAT32        // require PCF8583, SPI and SD_CARD
-
-//Scroll down the header file (don't cross the user zone) and make the required
+//Scroll down the "atmegaclib2.h" header file (don't cross the user zone) and make the required
 // settings for the CS (chip  select) pin, according to your schematics. IS
 // inside "#ifdef ENABLE_SD_CARD" conditionals ...
 
@@ -56,10 +47,18 @@
 #endif
 
 #include <avr/io.h>
-#include <util/delay.h>
 #include <avr/interrupt.h>
+#include <util/delay.h>
 #include <avr/pgmspace.h>
-#include <atmegaclib2.h>
+#include <stdlib.h>
+#include "atmegaclib2.h"
+#include <serial.c>
+#include <serial_common.c>
+#include <conversion.c>
+#include <spi.c>
+#include <sd_card.c>
+#include <fat32.c>
+#include <onboard.c>
 
 //#define KEY_PRESSED   (!(PINC & 0x80))
 
