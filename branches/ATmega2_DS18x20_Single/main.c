@@ -6,7 +6,7 @@
  *  Description: Displaying the temperature and the id of a single temp.sensor
  *               on a single bus (specifically, DS18B20 sensor, external power)
  *  Hardware: Arduino UNO, DS18B20 sensor (on EvB4.3 board). The sensor
- *             is connected to the Digital 7 pin on Arduino (PD7 on any ATmega),
+ *             is connected to the Analog pin 5 on Arduino (PC5 on any ATmega),
  *             is externally powered and have a 4k7 pull-up resistor on data
  *             line.
  *
@@ -40,25 +40,16 @@
  */
 
 /*
-//Enable the following definitions on "atmegaclib2.h" header:
-
-#define UART_BAUD_RATE			57600 // default is 57600
-#define UART_BAUD_SELECT		(F_CPU / (UART_BAUD_RATE * 16L) - 1)
-#define ENABLE_SERIAL_POLL // require CONVERSION, conflicts with SERIAL
-#define ENABLE_CONVERSION    // useful for Serial, LCD and 7SEG Display
-#define ENABLE_ONE_WIRE    // one wire protocol
-#define ENABLE_DS18_2_ // Dallas temperature sensors, require ONE_WIRE
-
-//Scroll down the header file and, still in the user zone, search for and
+//Scroll down the "atmegaclib2.h" header file and, still in the user zone, search for and
 // change the following definitions, as bellow:
 
 #define OW_ONE_BUS <-- uncomment this line.
 
 // search for the following lines and change to the required pin if you need.
-#define OW_PIN  PD7
-#define OW_IN   PIND
-#define OW_DDR  DDRD
-#define OW_OUT  PORTD
+#define OW_PIN  PC5
+#define OW_IN   PINC
+#define OW_DDR  DDRC
+#define OW_OUT  PORTC
 
 // Search for the following and change them as follows:
 
@@ -73,8 +64,6 @@
 // extended output via UART disabled(0) or enabled(1) :
 #define DS18X20_VERBOSE           0 //require serial comm.
 
-// Now, check if ATmegaCLib2 project has the same AVR target as your project,
-// and clean the ATmegaCLib2 project to delete the previous compiled code.
 // Now you are ready to compile and upload your project.
 */
 
@@ -86,7 +75,14 @@
 //#include <avr/interrupt.h>
 #include <util/delay.h>
 #include <avr/pgmspace.h>
-#include <atmegaclib2.h>
+#include <stdlib.h>
+#include "atmegaclib2.h"
+#include <serial_poll.c>
+#include <serial_common.c>
+#include <conversion.c>
+#include <one_wire.c>
+#include <dallas_temp.c>
+#include <onboard.c>
 
 void stop(void){
 	for(;;){

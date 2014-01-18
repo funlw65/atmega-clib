@@ -3,7 +3,12 @@
  *
  *  Created on: Aug 18, 2013
  *      Author: Vasile Guta Ciucur
- *  Description:
+ *  Description: Displaying on LCD (Port D) the temperature and the id of a single temp.sensor
+ *               on a single bus (specifically, DS18B20 sensor, external power)
+ *  Hardware: Arduino UNO, DS18B20 sensor (on EvB4.3 board). The sensor
+ *             is connected to the Analog pin 5 on Arduino (PC5 on any ATmega),
+ *             is externally powered and have a 4k7 pull-up resistor on data
+ *             line.
  *
  *******************************************************************************
  *  BSD License.
@@ -33,15 +38,7 @@
  *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  *  POSSIBILITY OF SUCH DAMAGE.
  */
-
-//Enable the following definitions on "atmegaclib2.h" header:
-
-//#define ENABLE_CONVERSION    // useful for Serial, LCD and 7SEG Display
-//#define ENABLE_ONE_WIRE    // one wire protocol
-//#define ENABLE_DS18_2_ // Dallas temperature sensors, require ONE_WIRE
-//#define ENABLE_LCD         // require CONVERSION
-
-//Scroll down the header file and, still in the user zone, search for and
+//Scroll down the "atmegaclib2.h" header file and, still in the user zone, search for and
 // change the following definitions, as bellow:
 
 //#define OW_ONE_BUS <-- uncomment this line.
@@ -67,8 +64,6 @@
 
 // Also, check and modify (if required) the LCD pin and port definitions
 
-// Now, check if ATmegaCLib2 project has the same AVR target as your project,
-// and clean the ATmegaCLib2 project to delete the previous compiled code.
 // Now you are ready to compile and upload your project.
 
 
@@ -82,7 +77,13 @@
 //#include <avr/interrupt.h>
 #include <util/delay.h>
 #include <avr/pgmspace.h>
-#include <atmegaclib2.h>
+//#include <stdlib.h>
+#include "atmegaclib2.h"
+#include <conversion.c>
+#include <one_wire.c>
+#include <dallas_temp.c>
+#include <lcd.c>
+#include <onboard.c>
 
 void stop(void){
 	for(;;){

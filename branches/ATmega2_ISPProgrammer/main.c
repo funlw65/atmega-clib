@@ -80,18 +80,7 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-//Enable the following definitions on "atmegaclib2.h" header:
-/*
-#define UART_BAUD_RATE			19200 // default is 57600
-#define UART_BAUD_SELECT		(F_CPU / (UART_BAUD_RATE * 16L) - 1)
-#define ENABLE_SERIAL // Interrupt based, require CONVERSION, conflicts with SERIAL_POLL
-#define ENABLE_PWM         // motor or led control (conflicts with pwmservo)
-#define ENABLE_CONVERSION    // useful for Serial, LCD and 7SEG Display
-#define ENABLE_ISPPROG     // Use Arduino as ISP Programmer - require SPI, conflict SD_Card
-#define ENABLE_SPI         // hardware SPI (master)
-*/
-
-//scroll down the header file to "#ifdef ENABLE_ISPPROG" line and
+//Scroll down the "atmegaclib2.h" header file to "#ifdef ENABLE_ISPPROG" line and
 // change the definitions for LED_ERR and LED_PMODE according to
 // your intended hardware but don't touch the LED_HB, as it needs
 // to be on the channel 1 of pwm (as defined by Arduino library)
@@ -102,6 +91,7 @@
 // programmer to the reset pin of the target microcontroller.
 
 // HAVE FUN!
+// BTW, you can use the ATmega48P microontroller for this project.
 
 
 #ifndef F_CPU
@@ -112,7 +102,12 @@
 #include <avr/interrupt.h>
 #include <util/delay.h>
 #include <avr/pgmspace.h>
-#include <atmegaclib2.h>
+#include "atmegaclib2.h"
+#include <pwm.c>
+#include <conversion.c>
+#include <serial.c>
+#include <serial_common.c>
+#include <spi.c>
 
 #define PROG_FLICKER TRUE
 

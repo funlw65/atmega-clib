@@ -36,19 +36,21 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-//Enable the following definitions on "atmegaclib2.h" header:
+/*
+ *  Now the project have his own atmegaclib2.h header.
+ */
 
-//#define ENABLE_7SEG // starting from one digit, up to eight digits.
-
-//Then, define the pins and the number of digits for the 7seg display in the
-// user zone, on the same header.
+/*
+ *  A schematic and an article to be written ...
+ */
 
 #ifndef F_CPU
 	#define F_CPU 16000000U //required by Atmel Studio 6
 #endif
 #include <avr/io.h>
 #include <util/delay.h>
-#include <atmegaclib2.h>
+#include "atmegaclib2.h"
+#include <7seg.c>
 
 void main(void) __attribute__((noreturn)); //this allows me to have a void main() function
 void main (void)
@@ -68,4 +70,3 @@ void main (void)
 		}
 	}
 }
-// test svn update (Sep 19, 2012)

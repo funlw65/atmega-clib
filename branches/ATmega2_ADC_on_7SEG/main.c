@@ -48,7 +48,10 @@
 #endif
 #include <avr/io.h>
 #include <util/delay.h>
-#include <atmegaclib2.h>
+#include "atmegaclib2.h"
+#include <adc.c>
+#include <conversion.c>
+#include <7seg.c>
 
 uint8_t i;
 
@@ -149,4 +152,3 @@ void main(void) {
 		//
 	}
 }
-

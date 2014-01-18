@@ -3,7 +3,6 @@
 	<name>ATmega2_GLCD_Test</name>
 	<comment></comment>
 	<projects>
-		<project>ATmegaCLib2</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>

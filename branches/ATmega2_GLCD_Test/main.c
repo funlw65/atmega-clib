@@ -44,11 +44,7 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-//Enable only the following definitions on "atmegaclib.h" header:
-
-//#define ENABLE_GLCD
-
-// and don't forget to set the ports on the header in user zone.
+// don't forget to set the ports on the header in user zone if you use diff. hw.
 
 #ifndef F_CPU
 #define F_CPU 16000000U // required by Atmel Studio 6
@@ -58,9 +54,10 @@
 //#include <avr/interrupt.h>
 //#include <util/delay.h>
 #include <avr/pgmspace.h>
-#include "arial_bold_14.h"
-#include "corsiva_12.h"
-#include <atmegaclib2.h>
+#include <arial_bold_14.h>
+#include <corsiva_12.h>
+#include "atmegaclib2.h"
+#include <glcd.c>
 
 void main(void) __attribute__((noreturn));
 void main(void) {
