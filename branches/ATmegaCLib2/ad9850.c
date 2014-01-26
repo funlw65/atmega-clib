@@ -3,11 +3,54 @@
  * See atmegaclib2.h header for the copyrights...
  * *****************************************************************************
  */
+#define ENABLE_ARDUINO_COMPAT
+
 #include "atmegaclib2.h"
+uint8_t W_CLK, FQ_UD, D7;
 uint32_t AD9850_frequency; // delta phase
 uint8_t AD9850_phase; // phase offset
+#ifdef ENABLE_ARDUINO_COMPAT
 
-//#define pulse(pin) {digitalWrite(pin, HIGH); digitalWrite(pin, LOW);}
+#define pulse(pin) {digitalWrite(pin, HIGH); digitalWrite(pin, LOW);}
+
+void AD9850_init(uint8_t xW_CLK, uint8_t xFQ_UD, uint8_t xD7){
+	W_CLK = xW_CLK;
+	FQ_UD = xFQ_UD;
+	D7 = xD7;
+    AD9850_frequency = 0;
+    AD9850_phase = 0;
+    pinMode(W_CLK, OUTPUT);
+    pinMode(FQ_UD, OUTPUT);
+    pinMode(D7, OUTPUT);
+    pulse(W_CLK);
+    pulse(FQ_UD);
+}
+
+void AD9850_update(void) {
+    uint32_t f = AD9850_frequency;
+    for (int i = 0; i < 32; i++, f >>= 1) {
+        digitalWrite(D7, f & (uint32_t)0x00000001);
+        pulse(W_CLK);
+    }
+    uint8_t p = AD9850_phase;
+    for (int i = 0; i < 8; i++, p >>= 1) {
+        digitalWrite(D7, p & (uint8_t)0x01);
+        pulse(W_CLK);
+    }
+    pulse(FQ_UD);
+}
+
+void AD9850_down(void) {
+    pulse(FQ_UD);
+    uint8_t p = 0x04;
+    for (int i = 0; i < 8; i++, p >>= 1) {
+        digitalWrite(D7, p & (uint8_t)0x01);
+        pulse(W_CLK);
+    }
+    pulse(FQ_UD);
+}
+
+#else
 
 void AD9850_init(void){
     AD9850_frequency = 0;
@@ -54,15 +97,6 @@ void AD9850_update(void) {
     cbi(AD9850_FQ_UD_PORT, AD9850_FQ_UD); //0
 }
 
-void AD9850_setfreq(double f) {
-	AD9850_frequency = f * 4294967296.0 / AD9850_EX_CLK;
-	AD9850_update();
-}
-void AD9850_setphase(uint8_t p) {
-	AD9850_phase = p << 3;
-	AD9850_update();
-}
-
 void AD9850_down(void) {
     //pulse(FQ_UD);
     sbi(AD9850_FQ_UD_PORT, AD9850_FQ_UD); //1
@@ -81,6 +115,16 @@ void AD9850_down(void) {
     //pulse(FQ_UD);
     sbi(AD9850_FQ_UD_PORT, AD9850_FQ_UD); //1
     cbi(AD9850_FQ_UD_PORT, AD9850_FQ_UD); //0
+}
+#endif
+
+void AD9850_setfreq(double f) {
+	AD9850_frequency = f * 4294967296.0 / AD9850_EX_CLK;
+	AD9850_update();
+}
+void AD9850_setphase(uint8_t p) {
+	AD9850_phase = p << 3;
+	AD9850_update();
 }
 
 void AD9850_up(void) { AD9850_update(); }

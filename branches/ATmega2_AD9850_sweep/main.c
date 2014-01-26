@@ -43,19 +43,52 @@
  *  A schematic and an article to be written ...
  */
 
+/*
+ *  Note: If you don't use Arduino compatibility mode,
+ *        then you should define the pins and ports inside atmegaclib.h
+ *        Look for "#ifdef ENABLE_ARDUINO_COMPAT" sections
+ */
+
 #ifndef F_CPU
-	#define F_CPU 16000000U //required by Atmel Studio 6
+#define F_CPU 16000000U //required by Atmel Studio 6
 #endif
 #include <avr/io.h>
 #include "atmegaclib2.h"
+#ifdef ENABLE_ARDUINO_COMPAT
+#include "arduinocompat.c"
+#endif
 #include "ad9850.c"
 
 void main(void) __attribute__((noreturn)); //this allows me to have a void main() function
-void main (void)
-{
-	AD9850_init();//pins are defined inside atmegaclib2.h header
-    /* NOTE: For device to start-up in serial mode,
-    hardwire pin 2 at 0, pin 3 at 1, and pin 4 at 1 */
+void main(void) {
+#ifdef ENABLE_ARDUINO_COMPAT
+#if defined(__AVR_ATmega48__)      || \
+	defined(__AVR_ATmega48P__)     || \
+    defined(__AVR_ATmega88__)      || \
+    defined(__AVR_ATmega88P__)     || \
+    defined(__AVR_ATmega168__)     || \
+    defined(__AVR_ATmega168P__)    || \
+    defined(__AVR_ATmega328P__)
+	AD9850_init(5, 6, 7); //Arduino UNO
+#elif defined(__AVR_ATmega16__)      || \
+		defined(__AVR_ATmega16A__)     || \
+	    defined(__AVR_ATmega164P__)    || \
+	    defined(__AVR_ATmega32__)      || \
+	    defined(__AVR_ATmega32A__)     || \
+	    defined(__AVR_ATmega324P__)    || \
+	    defined(__AVR_ATmega324PA__)   || \
+	    defined(__AVR_ATmega644__)     || \
+	    defined(__AVR_ATmega644P__)    || \
+	    defined(__AVR_ATmega1284P__)
+	AD9850_init(21, 22, 23); //Sanguino
+#endif
+#else
+	AD9850_init(); //pins are defined inside atmegaclib2.h header
+#endif
+	/* NOTE: For device to start-up in serial mode,
+	 hardwire pin 2 at 0, pin 3 at 1, and pin 4 at 1 */
+	//don't know what this means
+
 	// sweep form 1MHz to 10MHz
 	for (uint32_t i = 1e3; i < 1e4; i++) {
 		AD9850_setfreq(i * 1e3);

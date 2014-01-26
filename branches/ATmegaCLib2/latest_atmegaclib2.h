@@ -65,9 +65,9 @@
 // *****************************************************************************
 // Enabling/disabling additional functionality
 // *****************************************************************************
-#define UART_BAUD_RATE     57600 // default is 57600
-#define UART_BAUD_SELECT   (F_CPU / (UART_BAUD_RATE * 16L) - 1) //- don't touch
-#define ENABLE_SERIAL // Interrupt based, require CONVERSION, conflicts with SERIAL_POLL
+//#define UART_BAUD_RATE     57600 // default is 57600
+//#define UART_BAUD_SELECT   (F_CPU / (UART_BAUD_RATE * 16L) - 1) //- don't touch
+//#define ENABLE_SERIAL // Interrupt based, require CONVERSION, conflicts with SERIAL_POLL
 //#define ENABLE_SERIAL_POLL // require CONVERSION, conflicts with SERIAL
 //#define ENABLE_PWMSERVO    // servo control (conflicts with regular pwm)
 //#define ENABLE_PWM         // motor or led control (conflicts with pwmservo)
@@ -76,17 +76,17 @@
 //#define IR_DEBOUNCE        // uncomment to debounce IR with a delay
 //#define ENABLE_ADC         // analog to digital converter
 //#define ENABLE_TWI         // hardware I2C
-#define ENABLE_I2C_SOFTWARE // software I2C
-#define ENABLE_CONVERSION    // useful for Serial, LCD and 7SEG Display
+//#define ENABLE_I2C_SOFTWARE // software I2C
+//#define ENABLE_CONVERSION    // useful for Serial, LCD and 7SEG Display
 //#define ENABLE_XPRINTF       // Hmmm...
-#define ENABLE_PCF8583     // require CONVERSION and I2C/TWI
+//#define ENABLE_PCF8583     // require CONVERSION and I2C/TWI
 //#define ENABLE_ONE_WIRE    // one wire protocol
 //#define ENABLE_DS18_2_ // Dallas temperature sensors, require ONE_WIRE
 //#define ENABLE_NB_DELAYS // Non-blocking, slotted delays (instead of millis()) using Timer0
 //#define ENABLE_MILLIS     // use TIMER0, conflicts with NB_DELAYS
 //#define ENABLE_EXTINT // External Interrupt(INT0,INT1,INT2) - not implemented yet.
 //#define ENABLE_PCINT   // Pin on Change Interrupt(PCINT) - not implemented yet.
-#define ENABLE_LCD         // require CONVERSION
+//#define ENABLE_LCD         // require CONVERSION
 //#define ENABLE_GLCD
 //#define ENABLE_7SEG        // starting from one digit, up to eight digits.
 //#define ENABLE_ISPPROG     // Use Arduino as ISP Programmer - require SPI, conflict SD_Card
@@ -99,6 +99,7 @@
 //#define ENABLE_GPL_RFM12B //requires SPI, XPRINTF, conflicts with RFM12B and IR
 //#define ENABLE_MIRF24     // requires SPI
 #define ENABLE_AD9850     //
+#define ENABLE_ARDUINO_COMPAT
 //#define OPTIMIZE_SPEED
 // *****************************************************************************
 // End block of "enable/disable" features
@@ -109,6 +110,7 @@
 // change the following if ad9850 is connected to
 // other frequency crystal oscillator
 #define AD9850_EX_CLK 125.0e6
+#ifndef ENABLE_ARDUINO_COMPAT
 // Let's define the pins and ports for connections
 #if defined(__AVR_ATmega16__)      || \
 	defined(__AVR_ATmega16A__)     || \
@@ -153,13 +155,19 @@
 #define AD9850_D7_PORT     PORTD
 #define AD9850_D7          PD7
 #endif
+#endif
 
+#ifdef ENABLE_ARDUINO_COMPAT
+void AD9850_init(uint8_t xW_CLK, uint8_t xFQ_UD, uint8_t xD7);
+#else
 void AD9850_init(void);
+#endif
 void AD9850_setfreq(double f);
 void AD9850_setphase(uint8_t p);
 void AD9850_down(void);
 void AD9850_up(void);
 #endif // ENABLE_AD9850
+//--
 
 //--
 #ifdef ENABLE_XPRINTF
@@ -734,7 +742,6 @@ uint8_t SEG_DIGITS_BUFFER[1];
 //setup the interrupt to trigger on negative edge
 #define RFM12_INT_SETUP()   EICRA |= (1<<ISC11)
 
-
 #elif defined(MCUCR) && defined(ISC00) && defined(GICR)
 //the interrupt vector
 #define RFM12_INT_VECT (INT0_vect)
@@ -772,7 +779,6 @@ uint8_t SEG_DIGITS_BUFFER[1];
 
 //setup the interrupt to trigger on negative edge
 #define RFM12_INT_SETUP()   MCUCR |= (1<<ISC11)
-
 
 #else
 #error "Interrupt not finished for this CPU"
@@ -858,7 +864,6 @@ uint8_t SEG_DIGITS_BUFFER[1];
 #define mirf_CONFIG ((1<<RF24_EN_CRC) | (0<<RF24_CRCO) )
 
 #endif // ENABLE_MIRF24
-
 // ============ END USER ZONE --- NO EDITING ALLOWED!       ====================
 // = ************************************************************************* =
 // ============ DON'T MAKE MODIFICATIONS BELLOW THIS BORDER ====================
@@ -907,7 +912,11 @@ void onboard_led_off(void);
 void onboard_led_toggle(void);
 //--
 #ifdef ENABLE_AD9850
+#ifdef ENABLE_ARDUINO_COMPAT
+void AD9850_init(uint8_t xW_CLK, uint8_t xFQ_UD, uint8_t xD7);
+#else
 void AD9850_init(void);
+#endif
 void AD9850_setfreq(double f);
 void AD9850_setphase(uint8_t p);
 void AD9850_down(void);
@@ -1686,7 +1695,7 @@ typedef struct {
 
 	//! Buffer for the raw bytes to be transmitted.
 	uint8_t buffer[RFM12_TX_BUFFER_SIZE];
-} rf_tx_buffer_t;
+}rf_tx_buffer_t;
 
 //if receive mode is not disabled (default)
 #if !(RFM12_TRANSMIT_ONLY)
@@ -1712,7 +1721,7 @@ typedef struct {
 
 	//! The actual receive buffer data
 	uint8_t buffer[RFM12_RX_BUFFER_SIZE];
-} rf_rx_buffer_t;
+}rf_rx_buffer_t;
 #endif /* !(RFM12_TRANSMIT_ONLY) */
 
 //! Control and status structure.
@@ -1749,31 +1758,31 @@ typedef struct {
 
 #if RFM12_PWRMGT_SHADOW
 //! Power management shadow register.
-/** The wakeup timer feature needs to buffer the current power management state. */
-uint16_t pwrmgt_shadow;
+	/** The wakeup timer feature needs to buffer the current power management state. */
+	uint16_t pwrmgt_shadow;
 #endif
 
 #if RFM12_LOW_BATT_DETECTOR
 //! Low battery detector status.
-/** \see \ref batt_states "States for the low battery detection feature",
- * as well as rfm12_set_batt_detector() and rfm12_get_batt_status()
- */
-volatile uint8_t low_batt;
+	/** \see \ref batt_states "States for the low battery detection feature",
+	 * as well as rfm12_set_batt_detector() and rfm12_get_batt_status()
+	 */
+	volatile uint8_t low_batt;
 #endif /* RFM12_LOW_BATT_DETECTOR */
 
 #if RFM12_USE_WAKEUP_TIMER
 //! Wakeup timer flag.
-/** The wakeup timer feature sets this flag from the interrupt on it's ticks */
-volatile uint8_t wkup_flag;
+	/** The wakeup timer feature sets this flag from the interrupt on it's ticks */
+	volatile uint8_t wkup_flag;
 #endif
 
 #if RFM12_LIVECTRL
-uint16_t rxctrl_shadow;
-uint16_t afc_shadow;
-uint16_t txconf_shadow;
-uint16_t cfg_shadow;
+	uint16_t rxctrl_shadow;
+	uint16_t afc_shadow;
+	uint16_t txconf_shadow;
+	uint16_t cfg_shadow;
 #endif
-} rfm12_control_t;
+}rfm12_control_t;
 
 /************************
  * GLOBALS
@@ -1934,19 +1943,19 @@ uint8_t rfm12_get_batt_status(void);
 
 typedef struct {
 	uint16_t rfm12_hw_command; //actual SPI command for rfm12
-	uint16_t rfm12_hw_parameter_mask; //mask that selects valid bits for this parameter
-	uint16_t *shadow_register; //pointer to the shadow register to be used for this command
+	uint16_t rfm12_hw_parameter_mask;//mask that selects valid bits for this parameter
+	uint16_t *shadow_register;//pointer to the shadow register to be used for this command
 	uint16_t current_value;
 
 #if RFM12_LIVECTRL_CLIENT
 //these are for the client
-uint16_t min_val;
-uint16_t max_val;
-int16_t step;
-char *name;
-void (*to_string)(char *str, uint16_t value);
+	uint16_t min_val;
+	uint16_t max_val;
+	int16_t step;
+	char *name;
+	void (*to_string)(char *str, uint16_t value);
 #endif
-} livectrl_cmd_t;
+}livectrl_cmd_t;
 
 extern livectrl_cmd_t livectrl_cmds[];
 
@@ -2764,10 +2773,10 @@ void serial_putstr_f(int8_t *s); // send a string from Flash memory
 #define serial_puts_f(s__) serial_putstr_f((int8_t *)PSTR(s__))
 //void serial_putstr_e(uint8_t *s);   // send a string from EEPROM
 void serial_putint(int value);
-void serial_putU08(uint8_t value); // display a byte
-void serial_puthexU08(uint8_t value); // display a byte in hex value
-void serial_puthexU16(uint16_t value); // display a word in hex value
-void serial_puthexU32(uint32_t value); // display a double in hex value
+void serial_putU08(uint8_t value);// display a byte
+void serial_puthexU08(uint8_t value);// display a byte in hex value
+void serial_puthexU16(uint16_t value);// display a word in hex value
+void serial_puthexU32(uint32_t value);// display a double in hex value
 
 #define TX_NEWLINE {serial_putc(0x0d); serial_putc(0x0a);}
 // required by Dharmani's SD_Card functions...
@@ -3316,6 +3325,23 @@ void PCF8583_set_alarm_time(uint8_t hour, uint8_t min, uint8_t sec,
 void PCF8583_get_alarm_date(uint8_t *day, uint8_t *month);
 void PCF8583_set_alarm_date(uint8_t day, uint8_t month);
 #endif //ENABLE_PCF8583
+//--
+#ifdef ENABLE_ARDUINO_COMPAT /* subset of arduino functions */
+#define setpin_in(port, pin)    port &= ~_BV(pin)
+#define setpin_out(port, pin)   port |= _BV(pin)
+
+#define setpin(port, pin)       port |= _BV(pin)
+#define clearpin(port, pin)     port &= ~_BV(pin)
+
+void pinMode(uint8_t pin, uint8_t mode);
+void digitalWrite(uint8_t pin, uint8_t value);
+uint8_t digitalRead(uint8_t pin);
+#ifdef ENABLE_PWM /* using arduino compat and pwm */
+void analogWrite(uint8_t pin, uint8_t value);
+#endif
+
+#endif
+//--
 //Now, the following list of microcontrollers must meet some conditions:
 // 1. Must be supported by avr-gcc 4.7.2 and avr-libc 1.8 (svn 2291 or newer)
 // 2. Must be supported by avrdude (well, some definitions can be added
