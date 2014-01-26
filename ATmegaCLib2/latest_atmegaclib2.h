@@ -22,6 +22,7 @@
  *  - (c) 2012 Soeren Heisrath, http://www.das-labor.org/wiki/RFM12_library/en
  *  - (c) 2012 Vasile Guta Ciucur, https://sites.google.com/site/funlw65/
  *  - (c) xxxx Fabian Maximilian Thiele, website's gone
+ *  - (c) 2013 phk@FreeBSD.ORG, http://code.google.com/p/ad9850-arduino/
  *
  *******************************************************************************
  *  Redistribution and use in source and binary forms, with or without
@@ -97,10 +98,68 @@
 //#define ENABLE_RFM12B      // radio comm.- uses TIMER2, requires SPI
 //#define ENABLE_GPL_RFM12B //requires SPI, XPRINTF, conflicts with RFM12B and IR
 //#define ENABLE_MIRF24     // requires SPI
+#define ENABLE_AD9850     //
 //#define OPTIMIZE_SPEED
 // *****************************************************************************
 // End block of "enable/disable" features
 // *****************************************************************************
+
+//--
+#ifdef ENABLE_AD9850
+// change the following if ad9850 is connected to
+// other frequency crystal oscillator
+#define AD9850_EX_CLK 125.0e6
+// Let's define the pins and ports for connections
+#if defined(__AVR_ATmega16__)      || \
+	defined(__AVR_ATmega16A__)     || \
+    defined(__AVR_ATmega164P__)    || \
+    defined(__AVR_ATmega32__)      || \
+    defined(__AVR_ATmega32A__)     || \
+    defined(__AVR_ATmega324P__)    || \
+    defined(__AVR_ATmega324PA__)   || \
+    defined(__AVR_ATmega644__)     || \
+    defined(__AVR_ATmega644P__)    || \
+    defined(__AVR_ATmega1284P__)
+// word load clock pin
+#define AD9850_W_CLK_DDR   DDRC
+#define AD9850_W_CLK_PORT  PORTC
+#define AD9850_W_CLK       PC5
+// frequency update pin
+#define AD9850_FQ_UD_DDR   DDRC
+#define AD9850_FQ_UD_PORT  PORTC
+#define AD9850_FQ_UD       PC6
+// serial input pin
+#define AD9850_D7_DDR      DDRC
+#define AD9850_D7_PORT     PORTC
+#define AD9850_D7          PC7
+
+#elif defined(__AVR_ATmega48__)    || \
+	defined(__AVR_ATmega48P__)    || \
+    defined(__AVR_ATmega88__)      || \
+    defined(__AVR_ATmega88P__)     || \
+    defined(__AVR_ATmega168__)     || \
+    defined(__AVR_ATmega168P__)    || \
+    defined(__AVR_ATmega328P__)   // Arduino 28 pins
+// word load clock pin
+#define AD9850_W_CLK_DDR   DDRD
+#define AD9850_W_CLK_PORT  PORTD
+#define AD9850_W_CLK       PD5
+// frequency update pin
+#define AD9850_FQ_UD_DDR   DDRD
+#define AD9850_FQ_UD_PORT  PORTD
+#define AD9850_FQ_UD       PD6
+// serial input pin
+#define AD9850_D7_DDR      DDRD
+#define AD9850_D7_PORT     PORTD
+#define AD9850_D7          PD7
+#endif
+
+void AD9850_init(void);
+void AD9850_setfreq(double f);
+void AD9850_setphase(uint8_t p);
+void AD9850_down(void);
+void AD9850_up(void);
+#endif // ENABLE_AD9850
 
 //--
 #ifdef ENABLE_XPRINTF
@@ -118,7 +177,7 @@
 #define DELAY_SLOTS  3 // the number of non-blocking delays needed by user
 int16_t isr_countdowns[DELAY_SLOTS];
 #endif
-
+//--
 #ifdef ENABLE_ISPPROG
 // DEFINE 3 LEDS INDICATORS FOR THE ISP PROGRAMMER
 // TODO: To change the Heart Beat LED assignment because it must be a PWM channel!!!
@@ -165,6 +224,7 @@ int16_t isr_countdowns[DELAY_SLOTS];
 #define RESET_DDR     DDRB
 //--
 #elif defined(__AVR_ATmega48__)    || \
+	defined(__AVR_ATmega48P__)     || \
     defined(__AVR_ATmega88__)      || \
     defined(__AVR_ATmega88P__)     || \
     defined(__AVR_ATmega168__)     || \
@@ -217,6 +277,7 @@ int16_t isr_countdowns[DELAY_SLOTS];
 #ifdef ENABLE_FREQMEASURE
 // Arduino Uno, Duemilanove, LilyPad, Mini, Fio, etc
 #if defined(__AVR_ATmega48__)    || \
+		defined(__AVR_ATmega48P__)     || \
 	    defined(__AVR_ATmega88__)      || \
 	    defined(__AVR_ATmega88P__)     || \
 	    defined(__AVR_ATmega168__)     || \
@@ -844,6 +905,14 @@ void onboard_led_enable(void);
 void onboard_led_on(void);
 void onboard_led_off(void);
 void onboard_led_toggle(void);
+//--
+#ifdef ENABLE_AD9850
+void AD9850_init(void);
+void AD9850_setfreq(double f);
+void AD9850_setphase(uint8_t p);
+void AD9850_down(void);
+void AD9850_up(void);
+#endif // ENABLE_AD9850
 //--
 #ifdef ENABLE_MILLIS
 #ifdef ENABLE_NB_DELAYS
