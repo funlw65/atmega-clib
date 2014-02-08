@@ -1027,6 +1027,7 @@ volatile uint8_t SPI_TC;
 #define SS_DDR  DDRB
 
 #elif defined(__AVR_ATmega48__)    || \
+		defined(__AVR_ATmega48P__)     || \
       defined(__AVR_ATmega88__)      || \
       defined(__AVR_ATmega88P__)     || \
       defined(__AVR_ATmega168__)     || \

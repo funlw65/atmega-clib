@@ -32,6 +32,7 @@ ISR(INT0_vect) {
 	static uint8_t address;
 	static uint8_t sigcount = 0;
 #if defined(__AVR_ATmega48__)      || \
+	defined(__AVR_ATmega48P__)     || \
     defined(__AVR_ATmega88__)      || \
     defined(__AVR_ATmega88P__)     || \
     defined(__AVR_ATmega168__)     || \
@@ -109,6 +110,7 @@ ISR(INT0_vect) {
  **************************************************************************/
 void ir_init(void) {
 #if defined(__AVR_ATmega48__)      || \
+	defined(__AVR_ATmega48P__)     || \
     defined(__AVR_ATmega88__)      || \
     defined(__AVR_ATmega88P__)     || \
     defined(__AVR_ATmega168__)     || \
