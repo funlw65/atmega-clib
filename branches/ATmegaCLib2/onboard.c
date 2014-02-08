@@ -26,6 +26,7 @@ inline void onboard_led_enable(void) {
 #elif defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__) // Arduino Mega1280
 	sbi(DDRB, 7);
 #elif defined(__AVR_ATmega48__)    || \
+	defined(__AVR_ATmega48P__)     || \
     defined(__AVR_ATmega88__)      || \
     defined(__AVR_ATmega88P__)     || \
     defined(__AVR_ATmega168__)     || \
@@ -51,6 +52,7 @@ inline void onboard_led_on(void) {
 #elif defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__) // Arduino Mega1280
 	sbi(PORTB, 7);
 #elif defined(__AVR_ATmega48__)    || \
+	defined(__AVR_ATmega48P__)     || \
     defined(__AVR_ATmega88__)      || \
     defined(__AVR_ATmega88P__)     || \
     defined(__AVR_ATmega168__)     || \
@@ -76,6 +78,7 @@ inline void onboard_led_off(void) {
 #elif defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__) // Arduino Mega1280
 	cbi(PORTB, 7);
 #elif defined(__AVR_ATmega48__)    || \
+	defined(__AVR_ATmega48P__)     || \
     defined(__AVR_ATmega88__)      || \
     defined(__AVR_ATmega88P__)     || \
     defined(__AVR_ATmega168__)     || \
@@ -101,6 +104,7 @@ inline void onboard_led_toggle(void) {
 #elif defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__) // Arduino Mega1280
 	tbi(PORTB, 7);
 #elif defined(__AVR_ATmega48__)    || \
+	defined(__AVR_ATmega48P__)     || \
     defined(__AVR_ATmega88__)      || \
     defined(__AVR_ATmega88P__)     || \
     defined(__AVR_ATmega168__)     || \

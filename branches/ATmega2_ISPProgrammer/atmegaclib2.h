@@ -165,6 +165,7 @@ int16_t isr_countdowns[DELAY_SLOTS];
 #define RESET_DDR     DDRB
 //--
 #elif defined(__AVR_ATmega48__)    || \
+	defined(__AVR_ATmega48P__)    || \
     defined(__AVR_ATmega88__)      || \
     defined(__AVR_ATmega88P__)     || \
     defined(__AVR_ATmega168__)     || \
@@ -217,6 +218,7 @@ int16_t isr_countdowns[DELAY_SLOTS];
 #ifdef ENABLE_FREQMEASURE
 // Arduino Uno, Duemilanove, LilyPad, Mini, Fio, etc
 #if defined(__AVR_ATmega48__)    || \
+		defined(__AVR_ATmega48P__)     || \
 	    defined(__AVR_ATmega88__)      || \
 	    defined(__AVR_ATmega88P__)     || \
 	    defined(__AVR_ATmega168__)     || \
@@ -947,6 +949,7 @@ volatile uint8_t SPI_TC;
 #define SS_DDR  DDRB
 
 #elif defined(__AVR_ATmega48__)    || \
+	  defined(__AVR_ATmega48P__)     || \
       defined(__AVR_ATmega88__)      || \
       defined(__AVR_ATmega88P__)     || \
       defined(__AVR_ATmega168__)     || \
