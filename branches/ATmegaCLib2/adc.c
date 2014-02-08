@@ -56,6 +56,7 @@ uint16_t adc_get(uint8_t adcnum) {
     defined(__AVR_ATmega1284P__))
 	adcnum &= 7;
 #elif defined(__AVR_ATmega48__)  || \
+		defined(__AVR_ATmega48P__)     || \
     defined(__AVR_ATmega88__)      || \
     defined(__AVR_ATmega88P__)     || \
     defined(__AVR_ATmega168__)     || \
@@ -94,6 +95,7 @@ void adc_poweroff_digital_pinbuffer(uint8_t adcnum) {
     defined(__AVR_ATmega1284P__))
 	adcnum &= 7;
 #elif defined(__AVR_ATmega48__)    || \
+		defined(__AVR_ATmega48P__)     || \
     defined(__AVR_ATmega88__)      || \
     defined(__AVR_ATmega88P__)     || \
     defined(__AVR_ATmega168__)     || \

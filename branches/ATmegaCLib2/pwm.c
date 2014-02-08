@@ -41,6 +41,7 @@ void pwm_init(uint8_t pwmno) {
 #elif defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__) // Arduino Mega1280
 			sbi(DDRB, DDB5);
 #elif defined(__AVR_ATmega48__)    || \
+		defined(__AVR_ATmega48P__)     || \
     defined(__AVR_ATmega88__)      || \
     defined(__AVR_ATmega88P__)     || \
     defined(__AVR_ATmega168__)     || \
@@ -66,6 +67,7 @@ void pwm_init(uint8_t pwmno) {
 #elif defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__) // Arduino Mega1280
 			sbi(DDRB, DDB6);
 #elif defined(__AVR_ATmega48__)    || \
+		defined(__AVR_ATmega48P__)     || \
     defined(__AVR_ATmega88__)      || \
     defined(__AVR_ATmega88P__)     || \
     defined(__AVR_ATmega168__)     || \
@@ -96,6 +98,7 @@ void pwm_init(uint8_t pwmno) {
 #elif defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__) // Arduino Mega1280
 			sbi(DDRB, DDB4);
 #elif defined(__AVR_ATmega48__)    || \
+		defined(__AVR_ATmega48P__)     || \
     defined(__AVR_ATmega88__)      || \
     defined(__AVR_ATmega88P__)     || \
     defined(__AVR_ATmega168__)     || \
@@ -117,6 +120,7 @@ void pwm_init(uint8_t pwmno) {
 #elif defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__) // Arduino Mega1280
 			sbi(DDRH, DDH6);
 #elif defined(__AVR_ATmega48__)    || \
+		defined(__AVR_ATmega48P__)     || \
     defined(__AVR_ATmega88__)      || \
     defined(__AVR_ATmega88P__)     || \
     defined(__AVR_ATmega168__)     || \
