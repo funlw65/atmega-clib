@@ -103,11 +103,7 @@
 #include <util/delay.h>
 #include <avr/pgmspace.h>
 #include "atmegaclib2.h"
-#include <pwm.c>
-#include <conversion.c>
-#include <serial.c>
-#include <serial_common.c>
-#include <spi.c>
+#include <atmegaclib2_files.c>
 
 #define PROG_FLICKER TRUE
 

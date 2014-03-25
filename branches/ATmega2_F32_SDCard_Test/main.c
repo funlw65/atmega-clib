@@ -52,13 +52,7 @@
 #include <avr/pgmspace.h>
 #include <stdlib.h>
 #include "atmegaclib2.h"
-#include <serial.c>
-#include <serial_common.c>
-#include <conversion.c>
-#include <spi.c>
-#include <sd_card.c>
-#include <fat32.c>
-#include <onboard.c>
+#include <atmegaclib2_files.c>
 
 //#define KEY_PRESSED   (!(PINC & 0x80))
 

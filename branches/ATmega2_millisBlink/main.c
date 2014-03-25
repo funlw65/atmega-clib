@@ -46,12 +46,11 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include "atmegaclib2.h"
-#include "millis.c"
-#include "onboard.c"
+#include <atmegaclib2_files.c>
 
 uint32_t previousMillis = 0; // will store last time when millis LED was updated
-uint32_t interval = 1000; //1000 milliseconds delay
-uint8_t ledState = 0;
+uint32_t interval       = 1000; //1000 milliseconds delay
+//uint8_t  ledState       = 0;
 
 void main(void) __attribute__((noreturn));
 void main(void) {

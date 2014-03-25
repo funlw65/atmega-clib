@@ -47,10 +47,7 @@
 //#include <avr/interrupt.h>
 #include <stdlib.h> // use with dtostrf() function
 #include "atmegaclib2.h"
-#include <conversion.c>
-#include <serial_poll.c>
-#include <serial_common.c>
-#include <freqmeasure.c>
+#include <atmegaclib2_files.c>
 
 float sum = 0;
 int count = 0;

@@ -54,10 +54,7 @@
 #endif
 #include <avr/io.h>
 #include "atmegaclib2.h"
-#ifdef ENABLE_ARDUINO_COMPAT
-#include "arduinocompat.c"
-#endif
-#include "ad9850.c"
+#include <atmegaclib2_files.c>
 
 void main(void) __attribute__((noreturn)); //this allows me to have a void main() function
 void main(void) {
