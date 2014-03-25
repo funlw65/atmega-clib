@@ -58,7 +58,7 @@
 #include <avr/interrupt.h>
 //#include <util/delay.h>
 #include "atmegaclib2.h"
-#include <nbdelays.c>
+#include <atmegaclib2_files.c>
 
 
 void main(void) __attribute__((noreturn));

@@ -79,11 +79,7 @@
 #include <avr/pgmspace.h>
 //#include <stdlib.h>
 #include "atmegaclib2.h"
-#include <conversion.c>
-#include <one_wire.c>
-#include <dallas_temp.c>
-#include <lcd.c>
-#include <onboard.c>
+#include <atmegaclib2_files.c>
 
 void stop(void){
 	for(;;){

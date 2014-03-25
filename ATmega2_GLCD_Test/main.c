@@ -57,7 +57,7 @@
 #include <arial_bold_14.h>
 #include <corsiva_12.h>
 #include "atmegaclib2.h"
-#include <glcd.c>
+#include <atmegaclib2_files.c>
 
 void main(void) __attribute__((noreturn));
 void main(void) {

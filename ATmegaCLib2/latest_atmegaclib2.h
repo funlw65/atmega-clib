@@ -3342,6 +3342,7 @@ void analogWrite(uint8_t pin, uint8_t value);
 #endif
 
 #endif
+
 //--
 //Now, the following list of microcontrollers must meet some conditions:
 // 1. Must be supported by avr-gcc 4.7.2 and avr-libc 1.8 (svn 2291 or newer)

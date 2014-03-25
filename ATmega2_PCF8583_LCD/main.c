@@ -65,16 +65,7 @@
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
 #include "atmegaclib2.h"
-#include <conversion.c>
-#include <serial.c>
-#include <serial_common.c>
-#ifdef ENABLE_TWI
-#include <twi.c>
-#else
-#include <i2c.c>
-#endif
-#include <pcf8583.c>
-#include <lcd.c>
+#include <atmegaclib2_files.c>
 
 uint8_t month, day, hour, min, sec, hsec, buff_index;
 uint16_t year;

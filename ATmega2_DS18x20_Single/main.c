@@ -77,12 +77,7 @@
 #include <avr/pgmspace.h>
 #include <stdlib.h>
 #include "atmegaclib2.h"
-#include <serial_poll.c>
-#include <serial_common.c>
-#include <conversion.c>
-#include <one_wire.c>
-#include <dallas_temp.c>
-#include <onboard.c>
+#include <atmegaclib2_files.c>
 
 void stop(void){
 	for(;;){

@@ -49,9 +49,7 @@
 #include <avr/io.h>
 #include <util/delay.h>
 #include "atmegaclib2.h"
-#include <adc.c>
-#include <conversion.c>
-#include <7seg.c>
+#include <atmegaclib2_files.c>
 
 uint8_t i;
 
