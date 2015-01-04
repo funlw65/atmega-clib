@@ -1,0 +1,6 @@
+avrpaths//systempath/AVRDUDE=/usr/bin
+avrpaths//systempath/AVRGCC=/usr/bin
+avrpaths//systempath/AVRINCLUDE=/usr/avr/include
+avrpaths//systempath/MAKE=/usr/bin
+avrpaths//systempath/PDFPATH=
+eclipse.preferences.version=1
