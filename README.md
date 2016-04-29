@@ -6,4 +6,11 @@ A collection of functions form the Internat as well as my own contributions.
 The migration to C programming should be the next step for those who started with the Arduino
 and the Wiring language. 
 
-I tried to make it as easy as possible but there is always space for improvememnt.
+I tried to make it as easy as possible but there is always space for improvement.
+
+Tools used:
+- Eclipse (Indigo) for AVR
+- Atmel AVR Toolchain for Linux
+- avrdude 6.x
+- ATmega328P (Arduino UNO), ATmega644P (Sanguino), ATmega168P
+- Arduino bootlader (Optiboot) for all tested microcontrollers
