@@ -5779,39 +5779,6 @@ In this library the device names are the same as the pin names of the symbols, t
 </deviceset>
 </devicesets>
 </library>
-<library name="supply1">
-<description>&lt;b&gt;Supply Symbols&lt;/b&gt;&lt;p&gt;
- GND, VCC, 0V, +5V, -5V, etc.&lt;p&gt;
- Please keep in mind, that these devices are necessary for the
- automatic wiring of the supply signals.&lt;p&gt;
- The pin name defined in the symbol is identical to the net which is to be wired automatically.&lt;p&gt;
- In this library the device names are the same as the pin names of the symbols, therefore the correct signal names appear next to the supply symbols in the schematic.&lt;p&gt;
- &lt;author&gt;Created by librarian@cadsoft.de&lt;/author&gt;</description>
-<packages>
-</packages>
-<symbols>
-<symbol name="GND">
-<wire x1="-1.905" y1="0" x2="1.905" y2="0" width="0.254" layer="94"/>
-<text x="-2.54" y="-2.54" size="1.778" layer="96">&gt;VALUE</text>
-<pin name="GND" x="0" y="2.54" visible="off" length="short" direction="sup" rot="R270"/>
-</symbol>
-</symbols>
-<devicesets>
-<deviceset name="GND" prefix="GND">
-<description>&lt;b&gt;SUPPLY SYMBOL&lt;/b&gt;</description>
-<gates>
-<gate name="1" symbol="GND" x="0" y="0"/>
-</gates>
-<devices>
-<device name="">
-<technologies>
-<technology name=""/>
-</technologies>
-</device>
-</devices>
-</deviceset>
-</devicesets>
-</library>
 </libraries>
 <attributes>
 </attributes>
@@ -5842,14 +5809,13 @@ In this library the device names are the same as the pin names of the symbols, t
 <part name="R9" library="rcl" deviceset="R-EU_" device="0207/7"/>
 <part name="T1" library="transistor" deviceset="*-NPN-" device="TO92-EBC"/>
 <part name="SUPPLY1" library="supply2" deviceset="+5V" device=""/>
-<part name="GND1" library="supply1" deviceset="GND" device=""/>
 </parts>
 <sheets>
 <sheet>
 <plain>
 <text x="99.06" y="83.82" size="1.778" layer="94">7SEG Common Anode</text>
 <text x="93.98" y="35.56" size="1.778" layer="94">8 x 330R</text>
-<text x="132.08" y="25.4" size="1.778" layer="94">10K</text>
+<text x="91.44" y="30.48" size="1.778" layer="94">10K</text>
 </plain>
 <instances>
 <instance part="J1" gate="G$1" x="58.42" y="55.88"/>
@@ -5869,24 +5835,21 @@ In this library the device names are the same as the pin names of the symbols, t
 <instance part="R6" gate="G$1" x="99.06" y="53.34"/>
 <instance part="R7" gate="G$1" x="99.06" y="48.26"/>
 <instance part="R8" gate="G$1" x="99.06" y="43.18"/>
-<instance part="R9" gate="G$1" x="129.54" y="25.4" rot="R90"/>
+<instance part="R9" gate="G$1" x="88.9" y="33.02" rot="R90"/>
 <instance part="T1" gate="G$1" x="127" y="40.64"/>
 <instance part="SUPPLY1" gate="+5V" x="129.54" y="93.98"/>
-<instance part="GND1" gate="1" x="129.54" y="15.24"/>
 </instances>
 <busses>
 </busses>
 <nets>
 <net name="SEL" class="0">
 <segment>
-<pinref part="T1" gate="G$1" pin="B"/>
-<wire x1="124.46" y1="40.64" x2="88.9" y2="40.64" width="0.1524" layer="91"/>
-<label x="91.44" y="40.64" size="1.778" layer="95"/>
 <pinref part="J1" gate="G$1" pin="A2"/>
 <wire x1="45.72" y1="55.88" x2="43.18" y2="55.88" width="0.1524" layer="91"/>
 <wire x1="43.18" y1="55.88" x2="43.18" y2="22.86" width="0.1524" layer="91"/>
 <wire x1="43.18" y1="22.86" x2="88.9" y2="22.86" width="0.1524" layer="91"/>
-<wire x1="88.9" y1="22.86" x2="88.9" y2="40.64" width="0.1524" layer="91"/>
+<pinref part="R9" gate="G$1" pin="1"/>
+<wire x1="88.9" y1="22.86" x2="88.9" y2="27.94" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="N$2" class="0">
@@ -5980,10 +5943,7 @@ In this library the device names are the same as the pin names of the symbols, t
 <junction x="116.84" y="48.26"/>
 <junction x="116.84" y="43.18"/>
 <pinref part="T1" gate="G$1" pin="E"/>
-<pinref part="R9" gate="G$1" pin="2"/>
 <wire x1="129.54" y1="35.56" x2="129.54" y2="33.02" width="0.1524" layer="91"/>
-<junction x="129.54" y="33.02"/>
-<wire x1="129.54" y1="33.02" x2="129.54" y2="30.48" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="A" class="0">
@@ -6064,18 +6024,20 @@ In this library the device names are the same as the pin names of the symbols, t
 <wire x1="76.2" y1="43.18" x2="93.98" y2="43.18" width="0.1524" layer="91"/>
 </segment>
 </net>
-<net name="GND" class="0">
-<segment>
-<pinref part="R9" gate="G$1" pin="1"/>
-<pinref part="GND1" gate="1" pin="GND"/>
-<wire x1="129.54" y1="20.32" x2="129.54" y2="17.78" width="0.1524" layer="91"/>
-</segment>
-</net>
 <net name="+5V" class="0">
 <segment>
 <pinref part="SUPPLY1" gate="+5V" pin="+5V"/>
 <pinref part="T1" gate="G$1" pin="C"/>
 <wire x1="129.54" y1="91.44" x2="129.54" y2="45.72" width="0.1524" layer="91"/>
+</segment>
+</net>
+<net name="N$1" class="0">
+<segment>
+<pinref part="T1" gate="G$1" pin="B"/>
+<wire x1="124.46" y1="40.64" x2="88.9" y2="40.64" width="0.1524" layer="91"/>
+<label x="91.44" y="40.64" size="1.778" layer="95"/>
+<pinref part="R9" gate="G$1" pin="2"/>
+<wire x1="88.9" y1="38.1" x2="88.9" y2="40.64" width="0.1524" layer="91"/>
 </segment>
 </net>
 </nets>
