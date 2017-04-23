@@ -1,7 +1,7 @@
 [Go back to the main site](https://funlw65.github.io/)
 <hr />
+## :boom: Welcome!
 
-# :boom: ATmega C library
 Automatically exported from code.google.com/p/atmega-clib
 
 A C library made for Arduino, Sanguino and other ATmega microcontrollers. 
